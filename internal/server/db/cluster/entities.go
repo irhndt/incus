@@ -20,15 +20,16 @@ const (
 	TypeInstanceSnapshot      = 7
 	TypeNetwork               = 8
 	TypeNetworkACL            = 9
-	TypeNode                  = 10
-	TypeOperation             = 11
-	TypeStoragePool           = 12
-	TypeStorageVolume         = 13
-	TypeStorageVolumeBackup   = 14
-	TypeStorageVolumeSnapshot = 15
-	TypeWarning               = 16
-	TypeClusterGroup          = 17
-	TypeStorageBucket         = 18
+	TypeNetworkAddressSet     = 10
+	TypeNode                  = 11
+	TypeOperation             = 12
+	TypeStoragePool           = 13
+	TypeStorageVolume         = 14
+	TypeStorageVolumeBackup   = 15
+	TypeStorageVolumeSnapshot = 16
+	TypeWarning               = 17
+	TypeClusterGroup          = 18
+	TypeStorageBucket         = 19
 )
 
 // EntityNames associates an entity code to its name.
@@ -43,6 +44,7 @@ var EntityNames = map[int]string{
 	TypeInstanceSnapshot:      "instance snapshot",
 	TypeNetwork:               "network",
 	TypeNetworkACL:            "network acl",
+	TypeNetworkAddressSet:     "network address set",
 	TypeNode:                  "node",
 	TypeOperation:             "operation",
 	TypeStoragePool:           "storage pool",
