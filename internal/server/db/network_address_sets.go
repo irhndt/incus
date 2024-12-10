@@ -134,6 +134,23 @@ func (c *ClusterTx) GetNetworkAddressSet(ctx context.Context, projectName string
 	return id, as, nil
 }
 
+// GetNetworkAddressSetNameAndProjectWithID returns the network address set name and project name for the given ID.
+func (c *ClusterTx) GetNetworkAddressSetNameAndProjectWithID(ctx context.Context, networkACLID int) (string, string, error) {
+	var networkAddrSetName string
+	var projectName string
+	q := `SELECT networks_address_sets.name, projects.name FROM networks_address_sets JOIN projects ON projects.id=networks.project_id WHERE networks_address_sets.id=?`
+	err := c.tx.QueryRowContext(ctx, q, networkAddrSetID).Scan(&networkAddrSetName, &projectName)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", "", api.StatusErrorf(http.StatusNotFound, "Network ACL not found")
+		}
+
+		return "", "", err
+	}
+
+	return networkAddrSetName, projectName, nil
+}
+
 // CreateNetworkAddressSet creates a new Network Address Set.
 func (c *ClusterTx) CreateNetworkAddressSet(ctx context.Context, projectName string, info *api.NetworkAddressSetsPost) (int64, error) {
 	projectID, err := c.getProjectID(ctx, projectName)
