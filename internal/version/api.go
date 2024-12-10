@@ -454,6 +454,8 @@ var APIExtensions = []string{
 	"storage_live_migration",
 	"instance_console_screenshot",
 	"image_import_alias",
+	"network_address_set",
+	"network_address_set_all_projects",
 }
 
 // APIExtensionsCount returns the number of available API extensions.
