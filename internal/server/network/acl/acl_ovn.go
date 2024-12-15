@@ -579,6 +579,7 @@ func ovnRuleSubjectToOVNACLMatch(direction string, aclNameIDs map[string]int64, 
 
 				fieldParts = append(fieldParts, fmt.Sprintf("%s.%s == %s", protocol, direction, subjectCriterion))
 			} else if strings.HasPrefix(subjectCriterion, "$") {
+				// First dumb gues on how we might handle it DEBUG needed
 				// Address sets may contain MAC or IP addresses, so we try both.
 				// For IP sets: "(ip4 && ip4.src == $set) || (ip6 && ip6.src == $set)"
 				// For MAC sets: "eth.src == $set" or "eth.dst == $set"
@@ -646,8 +647,6 @@ func ovnRuleSubjectToOVNACLMatch(direction string, aclNameIDs map[string]int64, 
 				fieldParts = append(fieldParts, fmt.Sprintf("%s == @%s", portType, subjectPortSelector))
 			}
 		}
-	}
-
 	return strings.Join(fieldParts, " || "), networkSpecific, networkPeersNeeded, nil
 }
 
