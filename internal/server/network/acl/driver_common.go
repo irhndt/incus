@@ -541,7 +541,19 @@ func (d *common) validateRuleSubjects(fieldName string, direction ruleDirection,
 
 			return 0, fmt.Errorf("Named subjects not allowed in %q for %q rules", fieldName, direction)
 		}
-
+		if strings.HasPrefix(subject, "$") {
+			var addrSetName = strings.Trim(subject, '$')
+			err := d.state.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
+				var err error
+				id, addrSet, err = tx.GetNetworkAddressSet(ctx, d.Project(), addrSetName)
+				return err
+			})
+			if err != nil {
+				return false, false, false, fmt.Errorf("Failed getting network address set %s for subject validation: %w", addrSetName, err)
+			}
+			return 0, nil // An address set exist for this subject name
+			}
+		}
 		return 0, fmt.Errorf("Invalid subject %q", subject)
 	}
 
