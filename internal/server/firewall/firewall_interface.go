@@ -28,6 +28,6 @@ type Firewall interface {
 	InstanceSetupNetPrio(projectName string, instanceName string, deviceName string, netPrio uint32) error
 	InstanceClearNetPrio(projectName string, instanceName string, deviceName string) error
 
-	AddressSetToNFTSets(setName string, addresses map[string]) error
+	AddressSetToNFTSets(setName string, addresses []string) error
 	AddressSetRemove(setName string) error
 }

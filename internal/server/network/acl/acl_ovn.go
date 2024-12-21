@@ -585,12 +585,11 @@ func ovnRuleSubjectToOVNACLMatch(direction string, aclNameIDs map[string]int64, 
 				// For MAC sets: "eth.src == $set" or "eth.dst == $set"
 				// Combine them all:
 				// "((ip4 && ip4.{dir} == $set) || (ip6 && ip6.{dir} == $set) || eth.{dir} == $set)"
-	
+
 				combined := fmt.Sprintf("((ip4 && ip4.%s == %s) || (ip6 && ip6.%s == %s) || eth.%s == %s)",
 					direction, subjectCriterion, direction, subjectCriterion, direction, subjectCriterion)
 				fieldParts = append(fieldParts, combined)
 				continue
-			}
 			} else {
 				// If not valid IP subnet, check if subject is ACL name or address set or network peer name.
 				var subjectPortSelector ovn.OVNPortGroup
@@ -647,6 +646,7 @@ func ovnRuleSubjectToOVNACLMatch(direction string, aclNameIDs map[string]int64, 
 				fieldParts = append(fieldParts, fmt.Sprintf("%s == @%s", portType, subjectPortSelector))
 			}
 		}
+	}
 	return strings.Join(fieldParts, " || "), networkSpecific, networkPeersNeeded, nil
 }
 

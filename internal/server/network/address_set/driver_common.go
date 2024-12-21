@@ -1,13 +1,17 @@
-package address_sets
+package address_set
 
 import (
 	"context"
 	"fmt"
+	"net"
 
+	incus "github.com/lxc/incus/v6/client"
 	"github.com/lxc/incus/v6/internal/server/cluster"
 	"github.com/lxc/incus/v6/internal/server/cluster/request"
 	"github.com/lxc/incus/v6/internal/server/db"
 	"github.com/lxc/incus/v6/internal/server/state"
+	localUtil "github.com/lxc/incus/v6/internal/server/util"
+	"github.com/lxc/incus/v6/internal/version"
 	"github.com/lxc/incus/v6/shared/api"
 	"github.com/lxc/incus/v6/shared/logger"
 	"github.com/lxc/incus/v6/shared/revert"
@@ -16,6 +20,7 @@ import (
 // common represents a Network Address Set.
 type common struct {
 	logger      logger.Logger
+	state       *state.State
 	id          int64
 	projectName string
 	info        *api.NetworkAddressSet
@@ -53,26 +58,21 @@ func (d *common) Project() string {
 	return d.projectName
 }
 
-// Info returns copy of internal info for the Network ACL.
+// Info returns copy of internal info for the Network AddressSet.
 func (d *common) Info() *api.NetworkAddressSet {
 	// Copy internal info to prevent modification externally.
-	info := api.NetworkAddressSet{
-		Name:        d.info.Name,
-		info.Description = d.info.Description
-		Addresses:   append([]string(nil), d.info.Addresses...),
-		ExternalIDs: make(map[string]string, len(d.info.ExternalIDs)),
-		info.UsedBy = nil // To indicate its not populated (use Usedby() function to populate).
-		info.Project = d.projectName
-	}
-
-	for k, v := range d.info.ExternalIDs {
-		info.ExternalIDs[k] = v
-	}
+	info := api.NetworkAddressSet{}
+	info.Name = d.info.Name
+	info.Description = d.info.Description
+	info.Addresses = append([]string(nil), d.info.Addresses...)
+	info.ExternalIDs = localUtil.CopyConfig(d.info.ExternalIDs)
+	info.UsedBy = nil // To indicate its not populated (use Usedby() function to populate).
+	info.Project = d.projectName
 
 	return &info
 }
 
-// usedBy returns a list of ACL API endpoints referencing this Address Set.
+// usedBy returns a list of ACLs API endpoints referencing this Address Set.
 // If firstOnly is true then search stops at first result.
 func (d *common) usedBy(firstOnly bool) ([]string, error) {
 	usedBy := []string{}
@@ -122,7 +122,7 @@ func (d *common) isUsed() (bool, error) {
 	return len(usedBy) > 0, nil
 }
 
-//  validateName checks name is valid.
+// validateName checks name is valid.
 func (d *common) validateName(name string) error {
 	return ValidName(name)
 }
@@ -195,7 +195,7 @@ func (d *common) validateConfig(config *api.NetworkAddressSetPut) error {
 	return nil
 }
 
-func (d *driverCommon) Update(config *api.NetworkAddressSetPut, clientType request.ClientType) error {
+func (d *common) Update(config *api.NetworkAddressSetPut, clientType request.ClientType) error {
 	err := d.validateConfig(config)
 	if err != nil {
 		return err
@@ -204,32 +204,32 @@ func (d *driverCommon) Update(config *api.NetworkAddressSetPut, clientType reque
 	revert := revert.New()
 	defer revert.Fail()
 
-
 	if clientType == request.ClientTypeNormal {
 		oldConfig := d.info.NetworkAddressSetPut
 		err = d.state.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
 			// Update database. Its important this occurs before we attempt to apply to networks
-			return tx.UpdateNetworkAddressSet(ctx, d.id, config)
+			err := tx.UpdateNetworkAddressSet(ctx, d.projectName, d.info.Name, config)
+			return err
 		})
 		if err != nil {
 			return err
 		}
 		// Apply changes internally and reinitialize.
-		d.info.NetworkACLPut = *config
+		d.info.NetworkAddressSetPut = *config
 		d.init(d.state, d.id, d.projectName, d.info)
 		revert.Add(func() {
 			_ = d.state.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
-				return tx.UpdateNetworkACL(ctx, d.id, &oldConfig)
+				return tx.UpdateNetworkAddressSet(ctx, d.projectName, d.info.Name, &oldConfig)
 			})
 
-			d.info.NetworkACLPut = oldConfig
+			d.info.NetworkAddressSetPut = oldConfig
 			d.init(d.state, d.id, d.projectName, d.info)
 		})
 	}
 
 	// Get a list of networks that indirectly reference this Address Set via ACLs.
 	asNets := map[string]AddressSetUsage{}
-	err = AddressSetNetworkUsage(d.state, d.projectName, d.info.Name, asNets)
+	err = AddressSetNetworkUsage(d.state, d.projectName, d.info.Name, d.info.Addresses, asNets)
 	if err != nil {
 		return fmt.Errorf("Failed getting address set network usage: %w", err)
 	}
@@ -247,7 +247,7 @@ func (d *driverCommon) Update(config *api.NetworkAddressSetPut, clientType reque
 
 	// Apply address set changes to non-OVN networks on this member.
 	for _, asNet := range asNets {
-		err = FirewallApplyAddressSetRules(d.state, d.logger, d.projectName, d.info.Name, asNet)
+		err = FirewallApplyAddressSetRules(d.state, d.logger, d.projectName, asNet)
 		if err != nil {
 			return err
 		}
@@ -300,7 +300,7 @@ func (d *driverCommon) Update(config *api.NetworkAddressSetPut, clientType reque
 	return nil
 }
 
-func (d *driverCommon) Rename(newName string) error {
+func (d *common) Rename(newName string) error {
 	err := ValidName(newName)
 	if err != nil {
 		return err
@@ -322,7 +322,7 @@ func (d *driverCommon) Rename(newName string) error {
 	}
 
 	err = d.state.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
-		return tx.RenameNetworkAddressSet(ctx, d.id, newName)
+		return tx.RenameNetworkAddressSet(ctx, d.projectName, d.info.Name, newName)
 	})
 	if err != nil {
 		return err
@@ -335,7 +335,7 @@ func (d *driverCommon) Rename(newName string) error {
 	return nil
 }
 
-func (d *driverCommon) Delete() error {
+func (d *common) Delete() error {
 	usedBy, err := d.UsedBy()
 	if err != nil {
 		return err
@@ -346,7 +346,6 @@ func (d *driverCommon) Delete() error {
 	}
 
 	return d.state.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
-		return tx.DeleteNetworkAddressSet(ctx, d.id)
+		return tx.DeleteNetworkAddressSet(ctx, d.projectName, d.info.Name)
 	})
 }
-

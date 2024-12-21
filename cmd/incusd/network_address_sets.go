@@ -197,7 +197,7 @@ func networkAddressSetsGet(d *Daemon, r *http.Request) response.Response {
 			if !recursion {
 				resultString = append(resultString, fmt.Sprintf("/%s/network-address-sets/%s", version.APIVersion, addrSetName))
 			} else {
-				netAddressSet, err := address_sets.LoadByName(s, projectName, addrSetName)
+				netAddressSet, err := address_set.LoadByName(s, projectName, addrSetName)
 				if err != nil {
 					continue
 				}
@@ -265,17 +265,17 @@ func networkAddressSetsPost(d *Daemon, r *http.Request) response.Response {
 		return response.BadRequest(err)
 	}
 
-	_, err = address_sets.LoadByName(s, projectName, req.Name)
+	_, err = address_set.LoadByName(s, projectName, req.Name)
 	if err == nil {
 		return response.BadRequest(fmt.Errorf("The network address set already exists"))
 	}
 
-	err = address_sets.Create(s, projectName, &req)
+	err = address_set.Create(s, projectName, &req)
 	if err != nil {
 		return response.SmartError(err)
 	}
 
-	netAddrSet, err := address_sets.LoadByName(s, projectName, req.Name)
+	netAddrSet, err := address_set.LoadByName(s, projectName, req.Name)
 	if err != nil {
 		return response.BadRequest(err)
 	}
@@ -328,7 +328,7 @@ func networkAddressSetDelete(d *Daemon, r *http.Request) response.Response {
 		return response.SmartError(err)
 	}
 
-	netAddrSet, err := address_sets.LoadByName(s, projectName, addrSetName)
+	netAddrSet, err := address_set.LoadByName(s, projectName, addrSetName)
 	if err != nil {
 		return response.SmartError(err)
 	}
@@ -401,7 +401,7 @@ func networkAddressSetGet(d *Daemon, r *http.Request) response.Response {
 		return response.SmartError(err)
 	}
 
-	netAddrSet, err := address_sets.LoadByName(s, projectName, addrSetName)
+	netAddrSet, err := address_set.LoadByName(s, projectName, addrSetName)
 	if err != nil {
 		return response.SmartError(err)
 	}
@@ -498,7 +498,7 @@ func networkAddressSetPut(d *Daemon, r *http.Request) response.Response {
 	}
 
 	// Get the existing Network Address Set.
-	netAddrSet, err := address_sets.LoadByName(s, projectName, addrSetName)
+	netAddrSet, err := address_set.LoadByName(s, projectName, addrSetName)
 	if err != nil {
 		return response.SmartError(err)
 	}
@@ -518,13 +518,13 @@ func networkAddressSetPut(d *Daemon, r *http.Request) response.Response {
 	}
 
 	if r.Method == http.MethodPatch {
-		current := netAddrSet.Info()
+		// current := netAddrSet.Info()
 		// If config being updated via "patch" method, then merge all existing config with the keys that
 		// are present in the request config.
-		for k, v := range netACL.Info().Config {
-			_, ok := req.Config[k]
+		for k, v := range netAddrSet.Info().ExternalIDs {
+			_, ok := req.ExternalIDs[k]
 			if !ok {
-				req.Config[k] = v
+				req.ExternalIDs[k] = v
 			}
 		}
 	}
@@ -594,7 +594,7 @@ func networkAddressSetPost(d *Daemon, r *http.Request) response.Response {
 	}
 
 	// Get the existing Network Address Set
-	netAddrSet, err := address_sets.LoadByName(s, projectName, addrSetName)
+	netAddrSet, err := address_set.LoadByName(s, projectName, addrSetName)
 	if err != nil {
 		return response.SmartError(err)
 	}

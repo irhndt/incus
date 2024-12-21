@@ -2,30 +2,6 @@ package api
 
 import "strings"
 
-// NetworkAddressSet represents an address set for OVN.
-// Refer to doc/network-acls.md for details.
-//
-// swagger:model
-//
-// API extension: network_address_set.
-type NetworkAddressSet struct {
-	// Name of the address set
-	// Example: "core_services"
-	Name string `json:"name" yaml:"name"`
-
-	// Addresses included in the set (IPv4/IPv6/CIDR)
-	// Example: ["10.0.0.5", "192.168.0.1/24"]
-	Addresses []string `json:"addresses" yaml:"addresses"`
-
-	// Mapping of key-value pairs for custom use
-	// Example: {"prod": "false"}
-	ExternalIDs map[string]string `json:"external_ids,omitempty" yaml:"external_ids,omitempty"`
-
-	// Description of the address set
-	// Example: Server storing secrets
-	Description string `json:"description,omitempty" yaml:"description,omitempty"`
-}
-
 // NetworkAddressSetPost used for renaming an Address Set.
 //
 // swagger:model
@@ -64,12 +40,13 @@ type NetworkAddressSetsPost struct {
 	NetworkAddressSetPost `yaml:",inline"`
 }
 
-// NetworkAddressSetView used for displaying an addres set.
+// NetworkAddressSet represents an address set.
+// Refer to doc/network-acls.md for details.
 //
 // swagger:model
 //
 // API extension: network_address_set.
-type NetworkAddressSetView struct {
+type NetworkAddressSet struct {
 	NetworkAddressSetPut  `yaml:",inline"`
 	NetworkAddressSetPost `yaml:",inline"`
 

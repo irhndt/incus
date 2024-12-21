@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/lxc/incus/v6/internal/server/db"
+	"github.com/lxc/incus/v6/internal/server/network/acl"
 	"github.com/lxc/incus/v6/internal/server/state"
 	"github.com/lxc/incus/v6/shared/api"
 	"github.com/lxc/incus/v6/shared/util"
@@ -26,7 +27,7 @@ func LoadByName(s *state.State, projectName string, name string) (NetworkAddress
 	}
 
 	var as NetworkAddressSet = &common{} // Only a single driver currently.
-	as.(*common).init(s, id, projectName, asInfo)
+	as.init(s, id, projectName, asInfo)
 
 	return as, nil
 }
@@ -39,13 +40,6 @@ func Create(s *state.State, projectName string, asInfo *api.NetworkAddressSetsPo
 	err := addrSet.validateName(asInfo.Name)
 	if err != nil {
 		return err
-	}
-
-	// Convert to put struct for validation.
-	putConfig := api.NetworkAddressSetPut{
-		Addresses:   asInfo.Addresses,
-		ExternalIDs: asInfo.ExternalIDs,
-		Description: asInfo.Description,
 	}
 
 	err = addrSet.validateConfig(&asInfo.NetworkAddressSetPut)
@@ -183,13 +177,14 @@ func subjectListReferences(subjects string, addressSetName string) bool {
 
 // AddressSetUsage holds info about a network using the address set.
 type AddressSetUsage struct {
-	ID     int64
-	Name   string
-	Type   string
-	Config map[string]string
+	ID        int64
+	Name      string
+	Type      string
+	Addresses []string
+	Config    map[string]string
 }
 
-func AddressSetNetworkUsage(s *state.State, projectName string, addressSetName string, asNets map[string]AddressSetUsage) error {
+func AddressSetNetworkUsage(s *state.State, projectName string, addressSetName string, addresses []string, asNets map[string]AddressSetUsage) error {
 	// 1. Get ACLs referencing this address set.
 	aclNames := []string{}
 	err := AddressSetUsedBy(s, projectName, func(aclName string) error {
@@ -210,10 +205,11 @@ func AddressSetNetworkUsage(s *state.State, projectName string, addressSetName s
 	// Convert ACLNetworkUsage entries into AddressSetUsage entries.
 	for netName, netUsage := range aclNets {
 		asNets[netName] = AddressSetUsage{
-			ID:     netUsage.ID,
-			Name:   netUsage.Name,
-			Type:   netUsage.Type,
-			Config: netUsage.Config,
+			ID:        netUsage.ID,
+			Name:      netUsage.Name,
+			Type:      netUsage.Type,
+			Addresses: addresses,
+			Config:    netUsage.Config,
 		}
 	}
 

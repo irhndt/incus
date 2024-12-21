@@ -1114,10 +1114,10 @@ func (d Nftables) NetworkApplyForwards(networkName string, rules []AddressForwar
 }
 
 // AddressSetToNFTSets creates or updates named nft sets for all address sets.
-func (d Nftables) AddressSetToNFTSets(setName string, addresses map[string]struct{}) error {
+func (d Nftables) AddressSetToNFTSets(setName string, addresses []string) error {
 	var ipv4Addrs, ipv6Addrs, ethAddrs []string
 
-	for addr := range addresses {
+	for _, addr := range addresses {
 		// Try IP first.
 		ip := net.ParseIP(addr)
 		if ip != nil {

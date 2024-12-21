@@ -350,6 +350,8 @@ func allowPermission(objectType auth.ObjectType, entitlement auth.Entitlement, m
 				projectName = project.ImageProjectFromRecord(p)
 			} else if slices.Contains([]auth.ObjectType{auth.ObjectTypeNetwork, auth.ObjectTypeNetworkACL}, objectType) {
 				projectName = project.NetworkProjectFromRecord(p)
+			} else if slices.Contains([]auth.ObjectType{auth.ObjectTypeNetwork, auth.ObjectTypeNetworkAddressSet}, objectType) {
+				projectName = project.NetworkProjectFromRecord(p)
 			}
 
 			return projectName
@@ -2138,6 +2140,21 @@ func (d *Daemon) setupOpenFGA(apiURL string, apiToken string, storeID string) er
 				}
 
 				resources.NetworkACLObjects = append(resources.NetworkACLObjects, auth.ObjectNetworkACL(projectName, networkACLName))
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+
+			err = query.Scan(ctx, tx.Tx(), "SELECT networks_address_sets.name, projects.name FROM networks_address_sets JOIN projects ON projects.id=networks_address_sets.project_id", func(scan func(dest ...any) error) error {
+				var networkAddressSetName string
+				var projectName string
+				err := scan(&networkAddressSetName, &projectName)
+				if err != nil {
+					return err
+				}
+
+				resources.NetworkAddressSetObjects = append(resources.NetworkAddressSetObjects, auth.ObjectNetworkAddressSet(projectName, networkAddressSetName))
 				return nil
 			})
 			if err != nil {

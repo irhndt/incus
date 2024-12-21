@@ -8,9 +8,12 @@ package cluster
 const freshSchema = `
 CREATE TABLE "address_sets" (
         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        project_id INTEGER NOT NULL,
         name TEXT NOT NULL,
         addresses TEXT NOT NULL,
         UNIQUE (name)
+        UNIQUE (project_id, name),
+        FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
     );
 CREATE TABLE "address_sets_external_ids" (
         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,

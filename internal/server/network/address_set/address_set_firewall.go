@@ -8,21 +8,17 @@ import (
 )
 
 // FirewallApplyAddressSetRules applies Address Set rules to the network firewall.
-func FirewallApplyAddressSetRules(s *state.State, logger logger.Logger, projectName string, addressSet NetworkAddressSet) error {
+func FirewallApplyAddressSetRules(s *state.State, logger logger.Logger, projectName string, addressSet AddressSetUsage) error {
 	// Extract Address Set information.
-	asInfo := addressSet.Info()
-	setName := asInfo.Name
-	addresses := make(map[string]struct{}, len(asInfo.Addresses))
-	for _, addr := range asInfo.Addresses {
-		addresses[addr] = struct{}{}
-	}
+	setName := addressSet.Name
+	addresses := addressSet.Addresses
 
 	// Utilize the nftables driver to create or update nft sets.
 	if s.Firewall.String() != "nftables" {
 		return fmt.Errorf("Firewall driver nftables not found only supported for now")
 	}
 
-	// Apply Address Set to nftables.
+	// Apply Address Set to nftables using the updated interface.
 	err := s.Firewall.AddressSetToNFTSets(setName, addresses)
 	if err != nil {
 		return fmt.Errorf("Failed to apply Address Set %q to nftables: %w", setName, err)
@@ -38,8 +34,8 @@ func FirewallClearAddressSetRules(s *state.State, logger logger.Logger, projectN
 		return fmt.Errorf("Firewall driver nftables not found only supported for now")
 	}
 
-	// Remove Address Set from nftables.
-	err := s.Firewall.RemoveAddressSet(setName)
+	// Remove Address Set from nftables using AddressSetRemove.
+	err := s.Firewall.AddressSetRemove(setName)
 	if err != nil {
 		return fmt.Errorf("Failed to remove Address Set %q from nftables: %w", setName, err)
 	}

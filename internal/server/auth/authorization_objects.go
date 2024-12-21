@@ -310,7 +310,7 @@ func ObjectNetworkACL(projectName string, networkACLName string) Object {
 
 // ObjectNetworkAddressSet represents a network address set.
 func ObjectNetworkAddressSet(projectName string, networkAddressSetName string) Object {
-	object, _ := NewObject(ObjectTypeNetworkAddressSet, projectName, networkAddresSetName)
+	object, _ := NewObject(ObjectTypeNetworkAddressSet, projectName, networkAddressSetName)
 	return object
 }
 
