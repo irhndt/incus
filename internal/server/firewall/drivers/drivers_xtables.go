@@ -1654,3 +1654,108 @@ func (d Xtables) NetworkApplyForwards(networkName string, rules []AddressForward
 	reverter.Success()
 	return nil
 }
+
+func (d Xtables) AddressSetToNFTSets(setName string, addresses []string) error {
+	// Separate addresses by type.
+	var ipv4Addrs, ipv6Addrs, ethAddrs []string
+
+	for _, addr := range addresses {
+		ip := net.ParseIP(addr)
+		if ip != nil {
+			if ip.To4() != nil {
+				ipv4Addrs = append(ipv4Addrs, addr)
+				continue
+			} else {
+				ipv6Addrs = append(ipv6Addrs, addr)
+				continue
+			}
+		}
+
+		// Try MAC
+		_, err := net.ParseMAC(addr)
+		if err == nil {
+			ethAddrs = append(ethAddrs, addr)
+			continue
+		}
+
+		return fmt.Errorf("Unsupported address format: %q", addr)
+	}
+
+	// If no addresses at all, still create empty sets to avoid errors.
+	if len(addresses) == 0 {
+		ipv4Addrs = []string{}
+		ipv6Addrs = []string{}
+		ethAddrs = []string{}
+	}
+
+	// Helper function to create or flush and then populate an ipset.
+	createOrUpdateSet := func(setName string, setType string, family string, addresses []string) error {
+		// Check if set exists already by trying to list it.
+		_, err := subprocess.RunCommand("ipset", "list", setName)
+		if err != nil {
+			// Create new set if doesn't exist.
+			args := []string{"create", setName, setType, "timeout", "0"}
+			if family != "" {
+				args = append(args, "family", family)
+			}
+
+			_, err = subprocess.RunCommand("ipset", args...)
+			if err != nil {
+				return fmt.Errorf("Failed creating ipset %q: %w", setName, err)
+			}
+		} else {
+			// Flush existing set.
+			_, err := subprocess.RunCommand("ipset", "flush", setName)
+			if err != nil {
+				return fmt.Errorf("Failed flushing ipset %q: %w", setName, err)
+			}
+		}
+
+		// Add addresses.
+		for _, addr := range addresses {
+			_, err := subprocess.RunCommand("ipset", "add", setName, addr)
+			if err != nil {
+				return fmt.Errorf("Failed adding %q to ipset %q: %w", addr, setName, err)
+			}
+		}
+
+		return nil
+	}
+
+	// Create/update IPv4 set.
+	err := createOrUpdateSet(fmt.Sprintf("%s_ipv4", setName), "hash:ip", "inet", ipv4Addrs)
+	if err != nil {
+		return err
+	}
+
+	// Create/update IPv6 set.
+	err = createOrUpdateSet(fmt.Sprintf("%s_ipv6", setName), "hash:ip", "inet6", ipv6Addrs)
+	if err != nil {
+		return err
+	}
+
+	// Create/update Ethernet (MAC) set.
+	// ipset set type for MAC: "hash:mac"
+	err = createOrUpdateSet(fmt.Sprintf("%s_eth", setName), "hash:mac", "", ethAddrs)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d Xtables) AddressSetRemove(setName string) error {
+	// Attempt to remove all three possible sets.
+	for _, suffix := range []string{"ipv4", "ipv6", "eth"} {
+		fullSetName := fmt.Sprintf("%s_%s", setName, suffix)
+		_, err := subprocess.RunCommand("ipset", "destroy", fullSetName)
+		if err != nil {
+			// If error indicates non-existence, ignore; otherwise return error.
+			if !strings.Contains(err.Error(), "The set with the given name does not exist") {
+				return fmt.Errorf("Failed deleting ipset %q: %w", fullSetName, err)
+			}
+		}
+	}
+
+	return nil
+}
