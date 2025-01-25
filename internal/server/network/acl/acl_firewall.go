@@ -3,6 +3,7 @@ package acl
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/lxc/incus/v6/internal/server/db"
 	firewallDrivers "github.com/lxc/incus/v6/internal/server/firewall/drivers"
@@ -52,6 +53,53 @@ func FirewallACLRules(s *state.State, aclDeviceName string, aclProjectName strin
 				firewallACLRule.Log = true
 				// Max 29 chars.
 				firewallACLRule.LogName = fmt.Sprintf("%s-%s-%d", logPrefix, direction, ruleIndex)
+			}
+			if s.Firewall.String() == "xtables" {
+				// Workaround converting address set names to a list of network addresses.
+                resolveAddressSets := func(field string) (string, error) {
+                    parts := util.SplitNTrimSpace(field, ",", -1, false)
+                    resolved := []string{}
+
+                    for _, part := range parts {
+                        if strings.HasPrefix(part, "$") {
+                            addressSetName := strings.TrimPrefix(part, "$")
+                            var addresses []string
+
+                            err := s.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
+                                _, addrSet, err := tx.GetNetworkAddressSet(ctx, aclProjectName, addressSetName)
+                                if err != nil {
+                                    return fmt.Errorf("Failed to resolve address set %q: %w", addressSetName, err)
+                                }
+
+                                addresses = addrSet.Addresses
+                                return nil
+                            })
+                            if err != nil {
+                                return "", err
+                            }
+
+                            resolved = append(resolved, addresses...)
+                        } else {
+                            resolved = append(resolved, part)
+                        }
+                    }
+
+                    return strings.Join(resolved, ","), nil
+                }
+			
+				var err error
+                if firewallACLRule.Source != "" {
+                    firewallACLRule.Source, err = resolveAddressSets(firewallACLRule.Source)
+                    if err != nil {
+                        return fmt.Errorf("Failed to resolve source address sets: %w", err)
+                    }
+                }
+                if firewallACLRule.Destination != "" {
+                    firewallACLRule.Destination, err = resolveAddressSets(firewallACLRule.Destination)
+                    if err != nil {
+                        return fmt.Errorf("Failed to resolve destination address sets: %w", err)
+                    }
+                }
 			}
 
 			switch {
