@@ -767,7 +767,7 @@ func (f *FGA) RenameNetworkACL(ctx context.Context, projectName string, oldNetwo
 }
 
 // AddNetworkAddressSet adds a network address set to the authorization model.
-func (f *fga) AddNetworkAddressSet(ctx context.Context, projectName string, networkAddressSetName string) error {
+func (f *FGA) AddNetworkAddressSet(ctx context.Context, projectName string, networkAddressSetName string) error {
 	writes := []client.ClientTupleKey{
 		{
 			User:     ObjectProject(projectName).String(),
@@ -780,7 +780,7 @@ func (f *fga) AddNetworkAddressSet(ctx context.Context, projectName string, netw
 }
 
 // DeleteNetworkAddressSet removes a network address set from the authorization model.
-func (f *fga) DeleteNetworkAddressSet(ctx context.Context, projectName string, networkAddressSetName string) error {
+func (f *FGA) DeleteNetworkAddressSet(ctx context.Context, projectName string, networkAddressSetName string) error {
 	deletions := []client.ClientTupleKeyWithoutCondition{
 		{
 			User:     ObjectProject(projectName).String(),
@@ -793,7 +793,7 @@ func (f *fga) DeleteNetworkAddressSet(ctx context.Context, projectName string, n
 }
 
 // RenameNetworkAddressSet renames an existing network address set in the authorization model.
-func (f *fga) RenameNetworkAddressSet(ctx context.Context, projectName string, oldNetworkAddressSetName string, newNetworkAddressSetName string) error {
+func (f *FGA) RenameNetworkAddressSet(ctx context.Context, projectName string, oldNetworkAddressSetName string, newNetworkAddressSetName string) error {
 	writes := []client.ClientTupleKey{
 		{
 			User:     ObjectProject(projectName).String(),
@@ -814,7 +814,7 @@ func (f *fga) RenameNetworkAddressSet(ctx context.Context, projectName string, o
 }
 
 // AddProfile is a no-op.
-func (f *fga) AddProfile(ctx context.Context, projectName string, profileName string) error {
+func (f *FGA) AddProfile(ctx context.Context, projectName string, profileName string) error {
 	writes := []client.ClientTupleKey{
 		{
 			User:     ObjectProject(projectName).String(),

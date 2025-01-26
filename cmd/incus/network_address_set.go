@@ -165,7 +165,7 @@ func (c *cmdNetworkAddressSetList) Run(cmd *cobra.Command, args []string) error 
 		header = append([]string{i18n.G("PROJECT")}, header...)
 	}
 
-	return cli.RenderTable(c.flagFormat, header, data, sets)
+	return cli.RenderTable(os.Stdout, c.flagFormat, header, data, sets)
 }
 
 // Show
