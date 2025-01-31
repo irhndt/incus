@@ -17,7 +17,10 @@ func FirewallApplyAddressSetRules(s *state.State, logger logger.Logger, projectN
 	if s.Firewall.String() == "nftables" {
 		// Apply Address Set to nftables using the updated interface.
 		status, err := s.Firewall.NamedAddressSetExists(fmt.Sprintf("%s_ipv4", setName), "inet")
-		if status != true {
+		if err != nil {
+			return fmt.Errorf("Failed to apply Address Set %q to nftables: %w", setName, err)
+		}
+		if status == true {
 			err := s.Firewall.CreateNetworkAddressSet(setName, addresses)
 			if err != nil {
 				return fmt.Errorf("Failed to apply Address Set %q to nftables: %w", setName, err)
