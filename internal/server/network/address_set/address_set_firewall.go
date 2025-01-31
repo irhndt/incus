@@ -21,7 +21,7 @@ func FirewallApplyAddressSetRules(s *state.State, logger logger.Logger, projectN
 			return fmt.Errorf("Failed to apply Address Set %q to nftables: %w", setName, err)
 		}
 		if status == true {
-			err := s.Firewall.CreateNetworkAddressSet(setName, addresses)
+			err := s.Firewall.CreateNamedAddressSet(setName, addresses)
 			if err != nil {
 				return fmt.Errorf("Failed to apply Address Set %q to nftables: %w", setName, err)
 			}
