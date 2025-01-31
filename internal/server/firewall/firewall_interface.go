@@ -25,7 +25,7 @@ type Firewall interface {
 	NetworkApplyACLRules(networkName string, rules []drivers.ACLRule) error
 	NetworkApplyForwards(networkName string, rules []drivers.AddressForward) error
 
-	InstanceSetupBridgeFilter(projectName string, instanceName string, deviceName string, parentName string, hostName string, hwAddr string, IPv4Nets []*net.IPNet, IPv6Nets []*net.IPNet, parentManaged bool) error
+	InstanceSetupBridgeFilter(projectName string, instanceName string, deviceName string, parentName string, hostName string, hwAddr string, IPv4Nets []*net.IPNet, IPv6Nets []*net.IPNet, parentManaged bool, macFiltering bool, aclRules []drivers.ACLRule) error
 	InstanceClearBridgeFilter(projectName string, instanceName string, deviceName string, parentName string, hostName string, hwAddr string, IPv4Nets []*net.IPNet, IPv6Nets []*net.IPNet) error
 
 	InstanceSetupProxyNAT(projectName string, instanceName string, deviceName string, forward *drivers.AddressForward) error
@@ -37,6 +37,7 @@ type Firewall interface {
 	InstanceSetupNetPrio(projectName string, instanceName string, deviceName string, netPrio uint32) error
 	InstanceClearNetPrio(projectName string, instanceName string, deviceName string) error
 
-	AddressSetToNFTSets(setName string, addresses []string) error
-	AddressSetRemove(setName string) error
+	CreateNamedAddressSet(setName string, addresses []string) error
+	NamedAddressSetExists(setName string, family string) (bool, error)
+	NamedAddressSetRemove(setName string) error
 }

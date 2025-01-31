@@ -16,13 +16,15 @@ func FirewallApplyAddressSetRules(s *state.State, logger logger.Logger, projectN
 	// Utilize the nftables driver to create or update nft sets.
 	if s.Firewall.String() == "nftables" {
 		// Apply Address Set to nftables using the updated interface.
-		err := s.Firewall.AddressSetToNFTSets(setName, addresses)
-		if err != nil {
-			return fmt.Errorf("Failed to apply Address Set %q to nftables: %w", setName, err)
+		status, err := s.Firewall.NamedAddressSetExists(fmt.Sprintf("%s_ipv4", setName), "inet")
+		if status != true {
+			err := s.Firewall.CreateNetworkAddressSet(setName, addresses)
+			if err != nil {
+				return fmt.Errorf("Failed to apply Address Set %q to nftables: %w", setName, err)
+			}
 		}
 	}
-	// address sets used with xtables will be dynamically converted during ACL load as this backend does not supper address sets
-
+	// address sets used with xtables will not be supported
 	return nil
 }
 
@@ -34,7 +36,7 @@ func FirewallClearAddressSetRules(s *state.State, logger logger.Logger, projectN
 	}
 
 	// Remove Address Set from nftables using AddressSetRemove.
-	err := s.Firewall.AddressSetRemove(setName)
+	err := s.Firewall.NamedAddressSetRemove(setName)
 	if err != nil {
 		return fmt.Errorf("Failed to remove Address Set %q from nftables: %w", setName, err)
 	}
