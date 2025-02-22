@@ -1077,59 +1077,17 @@ func (d Nftables) aclRuleCriteriaToRules(networkName string, ipVersion uint, rul
 
 // aclRuleSubjectToACLMatch converts direction (source/destination) and subject criteria list into xtables args.
 // Returns nil if none of the subjects are appropriate for the ipVersion.
-// Modify aclRuleSubjectToACLMatch to detect if subject is a set reference:
 func (d Nftables) aclRuleSubjectToACLMatch(direction string, ipVersion uint, subjectCriteria ...string) ([]string, bool, error) {
-	// Original logic...
-	// If subject starts with '$', just return: ipFamily + " " + direction + " @" + setName
-	// return []string{ipFamily, direction, "@" + setName}, false, nil
-	// If partial or mismatch occurs, handle as before.
-	// If normal IP/CIDR, as original.
-
 	fieldParts := make([]string, 0, len(subjectCriteria))
 
 	partial := false
+
+	// For each criterion check if value looks like IP CIDR.
 	for _, subjectCriterion := range subjectCriteria {
-
-		if strings.HasPrefix(subjectCriterion, "$") {
-			// dont know for now how to set partial when an address set is used
-			// dont know whether whats gonna happen with MAC
-			// We append an element by address type because nft handle one addr type per set
-			// NFT set must have been created previously
-
-			setName := strings.TrimPrefix(subjectCriterion, "$")
-			if ipVersion == 6 {
-				fieldParts = append(fieldParts, fmt.Sprintf(" @%s_ipv6", setName))
-			} else {
-				fieldParts = append(fieldParts, fmt.Sprintf(" @%s_ipv4", setName))
-			}
-			// fieldParts = append(fieldParts, fmt.Sprintf("@%s_eth", setName))
-		} else {
-			if validate.IsNetworkRange(subjectCriterion) == nil {
-				criterionParts := strings.SplitN(subjectCriterion, "-", 2)
-				if len(criterionParts) > 1 {
-					ip := net.ParseIP(criterionParts[0])
-					if ip != nil {
-						var subjectIPVersion uint = 4
-						if ip.To4() == nil {
-							subjectIPVersion = 6
-						}
-
-						if ipVersion != subjectIPVersion {
-							partial = true
-							continue // Skip subjects that are not for the ipVersion we are looking for.
-						}
-
-						fieldParts = append(fieldParts, fmt.Sprintf("%s-%s", criterionParts[0], criterionParts[1]))
-					}
-				} else {
-					return nil, false, fmt.Errorf("Invalid IP range %q", subjectCriterion)
-				}
-			} else {
-				ip := net.ParseIP(subjectCriterion)
-				if ip == nil {
-					ip, _, _ = net.ParseCIDR(subjectCriterion)
-				}
-
+		if validate.IsNetworkRange(subjectCriterion) == nil {
+			criterionParts := strings.SplitN(subjectCriterion, "-", 2)
+			if len(criterionParts) > 1 {
+				ip := net.ParseIP(criterionParts[0])
 				if ip != nil {
 					var subjectIPVersion uint = 4
 					if ip.To4() == nil {
@@ -1141,35 +1099,45 @@ func (d Nftables) aclRuleSubjectToACLMatch(direction string, ipVersion uint, sub
 						continue // Skip subjects that are not for the ipVersion we are looking for.
 					}
 
-					fieldParts = append(fieldParts, subjectCriterion)
-				} else {
-					return nil, false, fmt.Errorf("Unsupported nftables subject %q", subjectCriterion)
+					fieldParts = append(fieldParts, fmt.Sprintf("%s-%s", criterionParts[0], criterionParts[1]))
 				}
+			} else {
+				return nil, false, fmt.Errorf("Invalid IP range %q", subjectCriterion)
+			}
+		} else {
+			ip := net.ParseIP(subjectCriterion)
+			if ip == nil {
+				ip, _, _ = net.ParseCIDR(subjectCriterion)
+			}
+
+			if ip != nil {
+				var subjectIPVersion uint = 4
+				if ip.To4() == nil {
+					subjectIPVersion = 6
+				}
+
+				if ipVersion != subjectIPVersion {
+					partial = true
+					continue // Skip subjects that are not for the ipVersion we are looking for.
+				}
+
+				fieldParts = append(fieldParts, subjectCriterion)
+			} else {
+				return nil, false, fmt.Errorf("Unsupported nftables subject %q", subjectCriterion)
 			}
 		}
 	}
 
-	// Determine if all parts are set references.
-	allAreSets := true
-	for _, part := range fieldParts {
-		if !strings.HasPrefix(part, "@") {
-			allAreSets = false
-			break
+	if len(fieldParts) > 0 {
+		ipFamily := "ip"
+		if ipVersion == 6 {
+			ipFamily = "ip6"
 		}
+
+		return []string{ipFamily, direction, fmt.Sprintf("{%s}", strings.Join(fieldParts, ","))}, partial, nil
 	}
 
-	ipFamily := "ip"
-	if ipVersion == 6 {
-		ipFamily = "ip6"
-	}
-
-	// If they are all set references, do not wrap them in braces.
-	if allAreSets {
-		return []string{ipFamily, direction, strings.Join(fieldParts, ",")}, partial, nil
-	}
-
-	// Otherwise, use braces (for a list of IPs, ranges, or a mix)
-	return []string{ipFamily, direction, fmt.Sprintf("{%s}", strings.Join(fieldParts, ","))}, partial, nil
+	return nil, partial, nil // No subjects suitable for ipVersion.
 }
 
 // aclRulePortToACLMatch converts protocol (tcp/udp), direction (sports/dports) and port criteria list into
