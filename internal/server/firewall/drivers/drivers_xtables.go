@@ -1655,13 +1655,6 @@ func (d Xtables) NetworkApplyForwards(networkName string, rules []AddressForward
 	return nil
 }
 
-
-func (d Xtables) CreateNamedAddressSet(setName string, addresses []string) error {
-	return fmt.Errorf("Address set are not implemented for xtables.")
-}
-func (d Xtables) NamedAddressSetExists(setName string, family string) (bool, error) {
-	return false, fmt.Errorf("Address set are not implemented for xtables.")
-}
-func (d Xtables) NamedAddressSetRemove(setName string) error {
+func (d Xtables) NetworkApplyAddressSets(networkName string, sets []AddressSet) error {
 	return fmt.Errorf("Address set are not implemented for xtables.")
 }

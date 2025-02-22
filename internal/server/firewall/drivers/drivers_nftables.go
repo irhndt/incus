@@ -319,6 +319,9 @@ func (d Nftables) networkSetupACLChainAndJumpRules(networkName string) error {
 
 // NetworkSetup configure network firewall.
 func (d Nftables) NetworkSetup(networkName string, opts Opts) error {
+	// Make address sets feature always available for netfilter
+	opts.AddressSet = true
+
 	// Do this first before adding other network rules, so jump to ACL rules come first.
 	if opts.ACL {
 		err := d.networkSetupACLChainAndJumpRules(networkName)
@@ -1089,17 +1092,17 @@ func (d Nftables) aclRuleSubjectToACLMatch(direction string, ipVersion uint, sub
 
 		if strings.HasPrefix(subjectCriterion, "$") {
 			// dont know for now how to set partial when an address set is used
-			// dont know whether whats gonna happen with MAC 
+			// dont know whether whats gonna happen with MAC
 			// We append an element by address type because nft handle one addr type per set
 			// NFT set must have been created previously
 
 			setName := strings.TrimPrefix(subjectCriterion, "$")
 			if ipVersion == 6 {
-				fieldParts = append(fieldParts, fmt.Sprintf("@%s_ipv4", setName))
+				fieldParts = append(fieldParts, fmt.Sprintf(" @%s_ipv6", setName))
 			} else {
-				fieldParts = append(fieldParts, fmt.Sprintf("@%s_ipv6", setName))
+				fieldParts = append(fieldParts, fmt.Sprintf(" @%s_ipv4", setName))
 			}
-				// fieldParts = append(fieldParts, fmt.Sprintf("@%s_eth", setName))
+			// fieldParts = append(fieldParts, fmt.Sprintf("@%s_eth", setName))
 		} else {
 			if validate.IsNetworkRange(subjectCriterion) == nil {
 				criterionParts := strings.SplitN(subjectCriterion, "-", 2)
@@ -1146,18 +1149,27 @@ func (d Nftables) aclRuleSubjectToACLMatch(direction string, ipVersion uint, sub
 		}
 	}
 
-	// If we got multiple sets or addresses, combine them with commas if multiple.
-	if len(fieldParts) > 0 {
-		// Nft allows ip saddr {10.0.0.1, @myset}, so we should be able to do that.
-		ipFamily := "ip"
-		if ipVersion == 6 {
-			ipFamily = "ip6"
+	// Determine if all parts are set references.
+	allAreSets := true
+	for _, part := range fieldParts {
+		if !strings.HasPrefix(part, "@") {
+			allAreSets = false
+			break
 		}
-
-		return []string{ipFamily, direction, fmt.Sprintf("{%s}", strings.Join(fieldParts, ","))}, partial, nil
 	}
 
-	return nil, partial, nil // No subjects suitable for ipVersion.
+	ipFamily := "ip"
+	if ipVersion == 6 {
+		ipFamily = "ip6"
+	}
+
+	// If they are all set references, do not wrap them in braces.
+	if allAreSets {
+		return []string{ipFamily, direction, strings.Join(fieldParts, ",")}, partial, nil
+	}
+
+	// Otherwise, use braces (for a list of IPs, ranges, or a mix)
+	return []string{ipFamily, direction, fmt.Sprintf("{%s}", strings.Join(fieldParts, ","))}, partial, nil
 }
 
 // aclRulePortToACLMatch converts protocol (tcp/udp), direction (sports/dports) and port criteria list into
@@ -1312,145 +1324,66 @@ func (d Nftables) NetworkApplyForwards(networkName string, rules []AddressForwar
 }
 
 // CreateNamedAddressSet creates or updates named nft sets for all address sets.
-func (d Nftables) CreateNamedAddressSet(setName string, addresses []string) error {
-    var ipv4Addrs, ipv6Addrs, ethAddrs []string
+func (d Nftables) NetworkApplyAddressSets(networkName string, sets []AddressSet) error {
+	var ipv4Addrs, ipv6Addrs, ethAddrs []string
 
-    for _, addr := range addresses {
-        // Try IP first.
-        ip := net.ParseIP(addr)
-        if ip != nil {
-            if ip.To4() != nil {
-                ipv4Addrs = append(ipv4Addrs, addr)
-                continue
-            } else {
-                ipv6Addrs = append(ipv6Addrs, addr)
-                continue
-            }
-        }
-
-        // Try MAC
-        _, err := net.ParseMAC(addr)
-        if err == nil {
-            ethAddrs = append(ethAddrs, addr)
-            continue
-        }
-
-        return fmt.Errorf("unsupported address format: %q", addr)
-    }
-
-    // If no addresses, still create empty sets to avoid errors.
-    if len(addresses) == 0 {
-        ipv4Addrs = []string{}
-        ipv6Addrs = []string{}
-        ethAddrs = []string{}
-    }
-
-    // Build NFT config.
-    config := &strings.Builder{}
-    fmt.Fprintf(config, "nft add set table inet %s {\n", nftablesNamespace)
-
-    if len(ipv4Addrs) > 0 {
-        // Create IPv4 set
-		fmt.Fprintf(config, "  set %s_ipv4 {\n    type ipv4_addr;\n    elements = { %s }\n  }\n", setName, strings.Join(ipv4Addrs, ", "))
-	} else if len(ipv6Addrs) > 0 {
-        // Create IPv6 set
-		fmt.Fprintf(config, "  set %s_ipv6 {\n    type ipv6_addr;\n    elements = { %s }\n  }\n", setName, strings.Join(ipv6Addrs, ", "))
-	} 
-	// MAKE it work for inet before eth
-	// else if len(ethAddrs) > 0 {
-    //     // Create Ethernet set
-	// 	fmt.Fprintf(config, "  set %s_eth {\n    type ether_addr;\n    elements = { %s }\n  }\n", setName, strings.Join(ethAddrs, ", "))
-    // }
-
-    fmt.Fprintf(config, "}\n")
-
-    // Apply the configuration using nft
-    err := subprocess.RunCommandWithFds(context.TODO(), strings.NewReader(config.String()), nil, "nft", "-f", "-")
-    if err != nil {
-        return fmt.Errorf("failed to apply nft sets for address set %q: %w", setName, err)
-    }
-
-    return nil
-}
-
-
-
-// RemoveAddressSet can be used to remove defined nftables sets
-func (d Nftables) NamedAddressSetRemove(setName string) error {
-	// Attempt to remove all three possible sets, ignoring errors if they don't exist.
-	for _, suffix := range []string{"ipv4", "ipv6", "eth"} {
-		// Just delete if they exist. nft doesn't fail if set doesn't exist when using 'delete set'?
-		// If it does, we can ignore the error or parse the output.
-		_, err := subprocess.RunCommand("nft", "delete", "set", "inet", nftablesNamespace, fmt.Sprintf("%s_%s", setName, suffix))
-		if err != nil {
-			// If error indicates non-existence, ignore; otherwise return error.
-			if !strings.Contains(err.Error(), "No such file or directory") &&
-				!strings.Contains(err.Error(), "No such set") {
-				return fmt.Errorf("Failed deleting nft set %q_%s: %w", setName, suffix, err)
+	for _, set := range sets {
+		name := set.Name
+		addresses := set.Addresses
+		for _, addr := range addresses {
+			// Try IP first.
+			ip := net.ParseIP(addr)
+			if ip != nil {
+				if ip.To4() != nil {
+					ipv4Addrs = append(ipv4Addrs, addr)
+					continue
+				} else {
+					ipv6Addrs = append(ipv6Addrs, addr)
+					continue
+				}
 			}
+
+			// Try MAC
+			_, err := net.ParseMAC(addr)
+			if err == nil {
+				ethAddrs = append(ethAddrs, addr)
+				continue
+			}
+
+			return fmt.Errorf("unsupported address format: %q", addr)
+		}
+
+		// If no addresses, still create empty sets to avoid errors.
+		if len(addresses) == 0 {
+			ipv4Addrs = []string{}
+			ipv6Addrs = []string{}
+			ethAddrs = []string{}
+		}
+
+		// Build NFT config.
+		config := &strings.Builder{}
+		fmt.Fprintf(config, "nft add set inet %s ", nftablesNamespace)
+
+		if len(ipv4Addrs) > 0 {
+			// Create IPv4 set
+			fmt.Fprintf(config, " %s_ipv4 {\n    type ipv4_addr;\n    elements = { %s }\n  }\n", name, strings.Join(ipv4Addrs, ", "))
+		} else if len(ipv6Addrs) > 0 {
+			// Create IPv6 set
+			fmt.Fprintf(config, " %s_ipv6 {\n    type ipv6_addr;\n    elements = { %s }\n  }\n", name, strings.Join(ipv6Addrs, ", "))
+		}
+		// MAKE it work for inet before eth
+		// else if len(ethAddrs) > 0 {
+		//     // Create Ethernet set
+		// 	fmt.Fprintf(config, "  set %s_eth {\n    type ether_addr;\n    elements = { %s }\n  }\n", setName, strings.Join(ethAddrs, ", "))
+		// }
+
+		fmt.Fprintf(config, "\n")
+
+		// Apply the configuration using nft
+		err := subprocess.RunCommandWithFds(context.TODO(), strings.NewReader(config.String()), nil, "nft", "-f", "-")
+		if err != nil {
+			return fmt.Errorf("failed to apply nft sets for address set %q: %w", name, err)
 		}
 	}
-
 	return nil
-}
-
-
-type NftListSetsOutput struct {
-    Nftables []NftListSetsEntry `json:"nftables"`
-}
-
-type NftListSetsEntry struct {
-    Metainfo *NftMetainfo `json:"metainfo,omitempty"`
-    Set      *NftSet      `json:"set,omitempty"`
-}
-
-type NftMetainfo struct {
-    Version           string `json:"version"`
-    ReleaseName       string `json:"release_name"`
-    JsonSchemaVersion int    `json:"json_schema_version"`
-}
-
-type NftSet struct {
-    Family string   `json:"family"`
-    Name   string   `json:"name"`
-    Table  string   `json:"table"`
-    Type   string   `json:"type"`
-    Handle int      `json:"handle"`
-    Elem   []string `json:"elem"`
-}
-
-
-// SetExists checks if a named set exists in nftables.
-// - setName: Name of the set to check.
-// - family: Address family of the set (e.g., "inet", "ip", "ip6").
-// - table: Name of the table where the set should exist. Actually nftables namespace for incus
-func (d Nftables) NamedAddressSetExists(setName string, family string) (bool, error) {
-    // Execute the nft command with JSON output
-    cmd := exec.Command("sudo", "nft", "-j", "list", "sets")
-    output, err := cmd.Output()
-    if err != nil {
-        return false, fmt.Errorf("failed to execute nft command: %w", err)
-    }
-
-    // Parse the JSON output
-    var setsOutput NftListSetsOutput
-    err = json.Unmarshal(output, &setsOutput)
-    if err != nil {
-        return false, fmt.Errorf("failed to parse nft command output: %w", err)
-    }
-
-    // Iterate through the sets to find a match
-    for _, entry := range setsOutput.Nftables {
-        if entry.Set != nil {
-            if strings.EqualFold(entry.Set.Name, setName) &&
-                strings.EqualFold(entry.Set.Family, family) &&
-                strings.EqualFold(entry.Set.Table, nftablesNamespace) {
-                return true, nil
-            }
-        }
-    }
-
-    // Set not found
-    fmt.Errorf("Set does not exist name: %s - family: %s - table : %s", setName, family,  nftablesNamespace,)
-    return false, nil
 }
