@@ -228,6 +228,8 @@ func (c *cmdNetworkAddressSetShow) Run(cmd *cobra.Command, args []string) error 
 type cmdNetworkAddressSetCreate struct {
 	global            *cmdGlobal
 	networkAddressSet *cmdNetworkAddressSet
+
+	flagDescription string
 }
 
 func (c *cmdNetworkAddressSetCreate) Command() *cobra.Command {
@@ -240,6 +242,7 @@ func (c *cmdNetworkAddressSetCreate) Command() *cobra.Command {
 incus network address-set create as1 < config.yaml
     Create network address set with configuration from config.yaml`))
 
+	cmd.Flags().StringVar(&c.flagDescription, "description", "", i18n.G("Network address set description")+"``")
 	cmd.RunE = c.Run
 	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
@@ -287,17 +290,26 @@ func (c *cmdNetworkAddressSetCreate) Run(cmd *cobra.Command, args []string) erro
 		},
 		NetworkAddressSetPut: asPut,
 	}
+	if c.flagDescription != "" {
+		addrSet.Description = c.flagDescription
+	}
 
 	if addrSet.ExternalIDs == nil {
 		addrSet.ExternalIDs = map[string]string{}
 	}
 
-	keys, err := getConfig(args[1:]...)
-	if err != nil {
-		return err
-	}
-	for k, v := range keys {
-		addrSet.ExternalIDs[k] = v
+	for i := 1; i < len(args); i++ {
+		entry := strings.SplitN(args[i], "=", 2)
+		if len(entry) < 2 {
+			return fmt.Errorf(i18n.G("Bad key/value pair: %s"), args[i])
+		}
+		if entry[0] == "addresses" {
+			addresses := strings.Split(entry[1], ",") // Split the comma-separated IPs
+        	addrSet.Addresses = append(addrSet.Addresses, addresses...)
+			continue
+		}
+
+		addrSet.ExternalIDs[entry[0]] = entry[1]
 	}
 
 	err = resource.server.CreateNetworkAddressSet(addrSet)
@@ -368,6 +380,9 @@ func (c *cmdNetworkAddressSetSet) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	writable := addrSet.Writable()
+	if writable.ExternalIDs == nil {
+		writable.ExternalIDs = make(map[string]string)
+	}
 	if c.flagIsProperty {
 		// handle as properties
 		err = unpackKVToWritable(&writable, keys)
