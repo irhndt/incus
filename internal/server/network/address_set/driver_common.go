@@ -229,7 +229,6 @@ func (d *common) Update(config *api.NetworkAddressSetPut, clientType request.Cli
 	if err != nil {
 		return fmt.Errorf("Failed getting address set network usage: %w", err)
 	}
-
 	// Separate out OVN networks from non-OVN networks for different handling.
 	asOVNNets := map[string]AddressSetUsage{}
 	for k, v := range asNets {

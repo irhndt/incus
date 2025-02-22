@@ -1,48 +1,74 @@
 package address_set
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/lxc/incus/v6/internal/server/db"
+	firewallDrivers "github.com/lxc/incus/v6/internal/server/firewall/drivers"
 	"github.com/lxc/incus/v6/internal/server/state"
+	"github.com/lxc/incus/v6/shared/api"
 	"github.com/lxc/incus/v6/shared/logger"
 )
 
 // FirewallApplyAddressSetRules applies Address Set rules to the network firewall.
 func FirewallApplyAddressSetRules(s *state.State, logger logger.Logger, projectName string, addressSet AddressSetUsage) error {
-	// Extract Address Set information.
-	setName := addressSet.Name
-	addresses := addressSet.Addresses
-
-	// Utilize the nftables driver to create or update nft sets.
-	if s.Firewall.String() == "nftables" {
-		// Apply Address Set to nftables using the updated interface.
-		status, err := s.Firewall.NamedAddressSetExists(fmt.Sprintf("%s_ipv4", setName), "inet")
-		if err != nil {
-			return fmt.Errorf("Failed to apply Address Set %q to nftables: %w", setName, err)
-		}
-		if status == true {
-			err := s.Firewall.CreateNamedAddressSet(setName, addresses)
-			if err != nil {
-				return fmt.Errorf("Failed to apply Address Set %q to nftables: %w", setName, err)
-			}
-		}
+	sets, err := FirewallAddressSets(s, addressSet.Name, projectName)
+	if err != nil {
+		return err
 	}
-	// address sets used with xtables will not be supported
-	return nil
+
+	return s.Firewall.NetworkApplyAddressSets(addressSet.Name, sets)
 }
 
-// FirewallClearAddressSetRules removes Address Set rules from the network firewall.
-func FirewallClearAddressSetRules(s *state.State, logger logger.Logger, projectName string, setName string) error {
-	// Utilize the nftables driver to remove nft sets.
-	if s.Firewall.String() != "nftables" {
-		return fmt.Errorf("Firewall driver nftables not found only supported for now")
+// FirewallAddressSets returns address sets for a network firewall.
+func FirewallAddressSets(s *state.State, addrSetDeviceName string, addrSetProjectName string) ([]firewallDrivers.AddressSet, error) {
+	var addressSets []firewallDrivers.AddressSet
+
+	// convertAddressSets convert the address set to a Firewall named set.
+	convertAddressSets := func(sets []*api.NetworkAddressSet) error {
+		for _, set := range sets {
+
+			firewallAddressSet := firewallDrivers.AddressSet{
+				Name:      set.Name,
+				Addresses: set.Addresses,
+			}
+			addressSets = append(addressSets, firewallAddressSet)
+		}
+		return nil
 	}
 
-	// Remove Address Set from nftables using AddressSetRemove.
-	err := s.Firewall.NamedAddressSetRemove(setName)
+	// Here we want to load every address set for a given project
+	var setsNames []string
+	var sets []*api.NetworkAddressSet
+
+	err := s.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
+		var err error
+		setsNames, err = tx.GetNetworkAddressSets(ctx, addrSetProjectName)
+
+		return err
+	})
 	if err != nil {
-		return fmt.Errorf("Failed to remove Address Set %q from nftables: %w", setName, err)
+		return nil, fmt.Errorf("Failed loading address set names for network %q: %w", addrSetDeviceName, err)
 	}
+	for _, setName := range setsNames {
+		var set *api.NetworkAddressSet
 
-	return nil
+		err := s.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
+			var err error
+			_, set, err = tx.GetNetworkAddressSet(ctx, addrSetProjectName, setName)
+
+			return err
+		})
+		if err != nil {
+			return nil, fmt.Errorf("Failed loading address set %q for network %q: %w", setName, addrSetDeviceName, err)
+		}
+
+		sets = append(sets, set)
+	}
+	err = convertAddressSets(sets)
+	if err != nil {
+		return nil, fmt.Errorf("Failed converting address set %q for network %q: %w", addrSetDeviceName, err)
+	}
+	return addressSets, nil
 }
