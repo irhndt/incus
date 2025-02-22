@@ -2,13 +2,14 @@ test_network_address_set() {
   ensure_import_testimage
   ensure_has_localhost_remote "${INCUS_ADDR}"
 
-  ! incus network create address-set 2432 || false # Don't allow non-hostname compatible names.
-  incus network create address-set testAS
+  ! incus network address-set create 2432 || false # Don't allow non-hostname compatible names.
+  incus network address-set create testAS
+  incus network address-set delete testAS
   incus project create testproj -c features.networks=true
   incus project create testproj2 -c features.networks=false
-  incus network address-set create testAS --project testproj
-  incus project show testproj | grep testAS # Check project sees testAS using it.
-  ! incus network address-set create testAS --project testproj2 || false
+  incus network address-set create testAS --project testproj  # NOK because still dependent on uniquenesseven if in separate project
+  incus project show testproj | grep testAS # Check project sees testAS using it. NOK
+  ! incus network address-set create testAS --project testproj2 || false # NOK
   incus network address-set ls | grep testAS
   incus network address-set ls --project testproj | grep testAS
   incus network address-set delete testAS
@@ -16,6 +17,7 @@ test_network_address_set() {
   ! incus network address-set ls | grep testAS || false
   ! incus network address-set ls --project testproj | grep testAS || false
   incus project delete testproj
+  incus project delete testproj2
   incus network address-set create testAS --description "Test description"
   incus network address-set list | grep -q -F 'Test description'
   incus network address-set show testAS | grep -q -F 'description: Test description'
@@ -23,13 +25,13 @@ test_network_address_set() {
 
 
     # address set creation from stdin
-    cat <<EOF | incus network address-set create testAS
-description: Test Address set
-addresses: 192.168..0.1, 192.68.0.254
-external_ids:
-  user.mykey: foo
-}
-EOF
+      cat <<EOF | incus network address-set create testAS
+  description: Test Address set
+  addresses: 192.168..0.1, 192.68.0.254
+  external_ids:
+    user.mykey: foo
+  }
+  EOF
 
   incus network address-set show testAS | grep "description:Test Address set"
   incus network address-set show testAS | grep "addresses: 192.168..0.1, 192.68.0.254"
