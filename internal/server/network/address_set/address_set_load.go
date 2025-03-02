@@ -162,7 +162,7 @@ func AddressSetUsedBy(s *state.State, projectName string, usageFunc func(aclName
 	return nil
 }
 
-// subjectListReferences checks if the subject list (comma separated) references $addressSetName
+// subjectListReferences checks if the subject list (comma separated) references $addressSetName.
 func subjectListReferences(subjects string, addressSetName string) bool {
 	parts := util.SplitNTrimSpace(subjects, ",", -1, false)
 	needle := "$" + addressSetName
@@ -183,7 +183,7 @@ type AddressSetUsage struct {
 	Config    map[string]string
 }
 
-// AddressSetNetworkUsage retrieve the networks that use an address set by checking ACLs
+// AddressSetNetworkUsage retrieve the networks that use an address set by checking ACLs.
 func AddressSetNetworkUsage(s *state.State, projectName string, addressSetName string, addresses []string, asNets map[string]AddressSetUsage) error {
 	// Get ACLs referencing this address set.
 	aclNames := []string{}
