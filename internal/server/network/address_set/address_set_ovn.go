@@ -15,7 +15,7 @@ import (
 	"github.com/lxc/incus/v6/shared/revert"
 )
 
-// OVNEnsureAddressSetsViaACLs ensure that every address set referenced by given acls are created in OVN NB DB
+// OVNEnsureAddressSetsViaACLs ensure that every address set referenced by given acls are created in OVN NB DB.
 func OVNEnsureAddressSetsViaACLs(s *state.State, l logger.Logger, client *ovn.NB, projectName string, ACLNames []string) (revert.Hook, error) {
 	// Build address set usage from network ACLs
 	setsNames, err := GetAddressSetsForACLs(s, projectName, ACLNames)
@@ -26,7 +26,7 @@ func OVNEnsureAddressSetsViaACLs(s *state.State, l logger.Logger, client *ovn.NB
 	return OVNEnsureAddressSets(s, l, client, projectName, setsNames)
 }
 
-// OVNDeleteAddressSetsViaACLs remove address sets used by network ACLS
+// OVNDeleteAddressSetsViaACLs remove address sets used by network ACLS.
 func OVNDeleteAddressSetsViaACLs(s *state.State, l logger.Logger, client *ovn.NB, projectName string, ACLNames []string) error {
 	setsNames, err := GetAddressSetsForACLs(s, projectName, ACLNames)
 	if err != nil {
@@ -91,10 +91,10 @@ func OVNEnsureAddressSets(s *state.State, l logger.Logger, client *ovn.NB, proje
 			}
 		}
 
-		// Check if the address set exists in OVN
+		// Check if the address set exists in OVN.
 		existingIPv4Set, existingIPv6Set, err := client.GetAddressSet(context.TODO(), ovn.OVNAddressSet(asInfo.Name))
 
-		// If address sets do not exist, create them
+		// If address sets do not exist, create them.
 		if errors.Is(err, ovn.ErrNotFound) {
 			err = client.CreateAddressSet(context.TODO(), ovn.OVNAddressSet(asInfo.Name), ipNets...)
 			ipNetStrings := make([]string, len(ipNets))
@@ -113,7 +113,7 @@ func OVNEnsureAddressSets(s *state.State, l logger.Logger, client *ovn.NB, proje
 				return nil, fmt.Errorf("Failed fetching address set %q (IPv6) from OVN: %w", asInfo.Name, err)
 			}
 
-			// Compute differences
+			// Compute differences.
 			existingIPv4Map := make(map[string]bool)
 			existingIPv6Map := make(map[string]bool)
 
@@ -147,7 +147,7 @@ func OVNEnsureAddressSets(s *state.State, l logger.Logger, client *ovn.NB, proje
 					}
 				}
 				if !found {
-					// OVN always register CIDR in address set
+					// OVN always register CIDR in address set.
 					_, network, err := net.ParseCIDR(existingIP)
 					if err != nil {
 						return nil, fmt.Errorf("Failed parsing existing IP in set %s err: %w", existingIP, err)
@@ -173,7 +173,7 @@ func OVNEnsureAddressSets(s *state.State, l logger.Logger, client *ovn.NB, proje
 				}
 			}
 
-			// Update OVN sets
+			// Update OVN sets.
 			if len(addIPv4) > 0 || len(addIPv6) > 0 {
 				err = client.UpdateAddressSetAdd(context.TODO(), ovn.OVNAddressSet(asInfo.Name), append(addIPv4, addIPv6...)...)
 				if err != nil {
@@ -236,8 +236,8 @@ func GetAddressSetsForACLs(s *state.State, projectName string, ACLNames []string
 	if err != nil {
 		return nil, fmt.Errorf("Failed loading address set names for project %q: %w", projectName, err)
 	}
-	// For every address set in project check if used by acls given via ACLNames
-	// If so store it in setsNames slice
+	// For every address set in project check if used by acls given via ACLNames.
+	// If so store it in setsNames slice.
 	for _, setName := range projectSetsNames {
 		err = AddressSetUsedBy(s, projectName, func(aclName string) error {
 			if slices.Contains(ACLNames, aclName) {

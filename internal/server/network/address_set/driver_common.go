@@ -260,7 +260,7 @@ func (d *common) Update(config *api.NetworkAddressSetPut, clientType request.Cli
 	return nil
 }
 
-// Rename is used to rename an address set
+// Rename is used to rename an address set.
 func (d *common) Rename(newName string) error {
 	err := d.validateName(newName)
 	if err != nil {
@@ -270,7 +270,7 @@ func (d *common) Rename(newName string) error {
 	// Check if name already exists.
 	_, err = LoadByName(d.state, d.projectName, newName)
 	if err == nil {
-		return fmt.Errorf("Address set by that name exists already")
+		return fmt.Errorf("Address set by that name: %s exists already", newName)
 	}
 
 	usedBy, err := d.UsedBy()
