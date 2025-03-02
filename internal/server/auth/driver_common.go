@@ -280,11 +280,6 @@ func (c *commonAuthorizer) RenameNetworkACL(ctx context.Context, projectName str
 	return nil
 }
 
-// AddProfile is a no-op.
-func (c *commonAuthorizer) AddProfile(ctx context.Context, projectName string, profileName string) error {
-	return nil
-}
-
 // AddNetworkAddressSet is a no-op.
 func (c *commonAuthorizer) AddNetworkAddressSet(ctx context.Context, projectName string, networkAddressSetName string) error {
 	return nil
@@ -297,6 +292,11 @@ func (c *commonAuthorizer) DeleteNetworkAddressSet(ctx context.Context, projectN
 
 // RenameNetworkAddressSet is a no-op.
 func (c *commonAuthorizer) RenameNetworkAddressSet(ctx context.Context, projectName string, oldNetworkAddressSetName string, newNetworkAddressSetName string) error {
+	return nil
+}
+
+// AddProfile is a no-op.
+func (c *commonAuthorizer) AddProfile(ctx context.Context, projectName string, profileName string) error {
 	return nil
 }
 
