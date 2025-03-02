@@ -1,4 +1,4 @@
-function test_address_set() {
+test_address_set() {
   ensure_import_testimage
   ensure_has_localhost_remote "${INCUS_ADDR}"
   
