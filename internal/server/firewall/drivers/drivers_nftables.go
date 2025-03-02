@@ -937,8 +937,6 @@ func (d Nftables) NetworkApplyACLRules(networkName string, rules []ACLRule) erro
 				continue
 			}
 			completeNftRules = append(completeNftRules, nftRules...)
-			//return fmt.Errorf("CRAFTED : rules len %d / %s", len(nftRules), strings.Join(nftRules, "-"))
-
 		}
 	}
 
