@@ -510,7 +510,7 @@ func (c *cmdNetworkAddressSetEdit) Run(cmd *cobra.Command, args []string) error 
 
 	resource := resources[0]
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network address set name"))
+		return errors.New(i18n.G("Missing network address set name"))
 	}
 
 	// If stdin isn't terminal, read yaml from it
@@ -615,7 +615,7 @@ func (c *cmdNetworkAddressSetRename) Run(cmd *cobra.Command, args []string) erro
 
 	resource := resources[0]
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network address set name"))
+		return errors.New(i18n.G("Missing network address set name"))
 	}
 
 	err = resource.server.RenameNetworkAddressSet(resource.name, api.NetworkAddressSetPost{Name: args[1]})
@@ -670,7 +670,7 @@ func (c *cmdNetworkAddressSetDelete) Run(cmd *cobra.Command, args []string) erro
 
 	resource := resources[0]
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network address set name"))
+		return errors.New(i18n.G("Missing network address set name"))
 	}
 
 	err = resource.server.DeleteNetworkAddressSet(resource.name)
@@ -724,7 +724,7 @@ func (c *cmdNetworkAddressSetAddAddr) Run(cmd *cobra.Command, args []string) err
 
 	resource := resources[0]
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network address set name"))
+		return errors.New(i18n.G("Missing network address set name"))
 	}
 
 	addrSet, etag, err := resource.server.GetNetworkAddressSet(resource.name)
@@ -779,7 +779,7 @@ func (c *cmdNetworkAddressSetRemoveAddr) Run(cmd *cobra.Command, args []string) 
 
 	resource := resources[0]
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network address set name"))
+		return errors.New(i18n.G("Missing network address set name"))
 	}
 
 	addrSet, etag, err := resource.server.GetNetworkAddressSet(resource.name)
@@ -796,7 +796,7 @@ func (c *cmdNetworkAddressSetRemoveAddr) Run(cmd *cobra.Command, args []string) 
 		for _, r := range toRemove {
 			if r == addr {
 				if removedCount > 0 && !c.flagForce {
-					return fmt.Errorf(i18n.G("Multiple addresses match. Use --force to remove them all"))
+					return errors.New(i18n.G("Multiple addresses match. Use --force to remove them all"))
 				}
 				match = true
 				removedCount++
@@ -810,7 +810,7 @@ func (c *cmdNetworkAddressSetRemoveAddr) Run(cmd *cobra.Command, args []string) 
 	}
 
 	if removedCount == 0 {
-		return fmt.Errorf(i18n.G("No matching addresses found"))
+		return errors.New(i18n.G("No matching addresses found"))
 	}
 
 	addrSet.Addresses = newAddrs
