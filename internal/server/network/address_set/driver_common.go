@@ -113,14 +113,14 @@ func (d *common) Etag() []any {
 }
 
 // isUsed returns whether or not the Address Set is used.
-func (d *common) isUsed() (bool, error) {
-	usedBy, err := d.usedBy(true)
-	if err != nil {
-		return false, err
-	}
-
-	return len(usedBy) > 0, nil
-}
+//func (d *common) isUsed() (bool, error) {
+//	usedBy, err := d.usedBy(true)
+//	if err != nil {
+//		return false, err
+//	}
+//
+//	return len(usedBy) > 0, nil
+//}
 
 // validateName checks name is valid.
 func (d *common) validateName(name string) error {
@@ -294,6 +294,7 @@ func (d *common) Rename(newName string) error {
 	return nil
 }
 
+// Delete is used to delete an address set
 func (d *common) Delete() error {
 	usedBy, err := d.UsedBy()
 	if err != nil {

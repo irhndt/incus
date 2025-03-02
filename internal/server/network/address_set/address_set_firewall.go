@@ -24,7 +24,6 @@ func FirewallApplyAddressSetRules(s *state.State, logger logger.Logger, projectN
 // FirewallAddressSets returns address sets for a network firewall.
 func FirewallAddressSets(s *state.State, addrSetDeviceName string, addrSetProjectName string) ([]firewallDrivers.AddressSet, error) {
 	var addressSets []firewallDrivers.AddressSet
-
 	// convertAddressSets convert the address set to a Firewall named set.
 	convertAddressSets := func(sets []*api.NetworkAddressSet) error {
 		for _, set := range sets {
@@ -68,7 +67,7 @@ func FirewallAddressSets(s *state.State, addrSetDeviceName string, addrSetProjec
 	}
 	err = convertAddressSets(sets)
 	if err != nil {
-		return nil, fmt.Errorf("Failed converting address set %q for network %q: %w", addrSetDeviceName, err)
+		return nil, fmt.Errorf("Failed converting address set %q for network %q: %w", setName, addrSetDeviceName, err)
 	}
 	return addressSets, nil
 }

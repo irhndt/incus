@@ -746,7 +746,6 @@ func (d Nftables) aclRulesToNftRules(hostName string, aclRules []ACLRule) (*nftR
 }
 
 func (d Nftables) aclRuleToNftRules(hostNameQuoted string, rule ACLRule) ([]string, []string, []string, error) {
-	nft4Rules := []string{}
 	nft6Rules := []string{}
 
 	// First try generating rules with IPv4 or IP agnostic criteria.
@@ -1203,21 +1202,20 @@ func (d Nftables) aclRuleSubjectToACLMatch(direction string, ipVersion uint, sub
 					ip, _, _ = net.ParseCIDR(subjectCriterion)
 				}
 
-				if ip != nil {
-					var subjectIPVersion uint = 4
-					if ip.To4() == nil {
-						subjectIPVersion = 6
-					}
-
-					if ipVersion != subjectIPVersion {
-						partial = true
-						continue // Skip subjects that are not for the ipVersion we are looking for.
-					}
-
-					literals = append(literals, subjectCriterion)
-				} else {
+				if ip == nil {
 					return nil, false, fmt.Errorf("Unsupported nftables subject %q", subjectCriterion)
 				}
+				var subjectIPVersion uint = 4
+				if ip.To4() == nil {
+					subjectIPVersion = 6
+				}
+
+				if ipVersion != subjectIPVersion {
+					partial = true
+					continue // Skip subjects that are not for the ipVersion we are looking for.
+				}
+
+				literals = append(literals, subjectCriterion)
 			}
 		}
 	}

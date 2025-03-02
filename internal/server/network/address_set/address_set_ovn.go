@@ -44,7 +44,7 @@ func OVNDeleteAddressSetsViaACLs(s *state.State, l logger.Logger, client *ovn.NB
 	return nil
 }
 
-// OVNEnsureAddressSet ensures that the address sets and their addresses are created in OVN NB DB.
+// OVNEnsureAddressSets ensures that the address sets and their addresses are created in OVN NB DB.
 // Returns a revert function to undo changes if needed.
 func OVNEnsureAddressSets(s *state.State, l logger.Logger, client *ovn.NB, projectName string, addressSetNames []string) (revert.Hook, error) {
 	revert := revert.New()
@@ -71,16 +71,9 @@ func OVNEnsureAddressSets(s *state.State, l logger.Logger, client *ovn.NB, proje
 			} else {
 				// If single IP address, convert to /32 or /128.
 				ip := net.ParseIP(addr)
-				if ip != nil {
-					bits := 32
-					if ip.To4() == nil {
-						bits = 128
-					}
-					mask := net.CIDRMask(bits, bits)
-					ipNets = append(ipNets, net.IPNet{IP: ip, Mask: mask})
-				} else {
-					// If MAC, skip IP sets. OVN address sets currently don't store MAC addresses.
-					// If needed, you'd have separate sets for MAC (not currently supported by OVN).
+				if ip == nil {
+					// If MAC, skip IP sets. OVN address sets currently store MAC addresses but we don't use them.
+					// If needed, you'd have separate sets for MAC.
 					_, errMac := net.ParseMAC(addr)
 					if errMac == nil {
 						// We currently ignore MAC addresses. OVN address sets are primarily for IP addresses.
@@ -89,6 +82,12 @@ func OVNEnsureAddressSets(s *state.State, l logger.Logger, client *ovn.NB, proje
 					}
 					return nil, fmt.Errorf("Unsupported address format: %q", addr)
 				}
+				bits := 32
+				if ip.To4() == nil {
+					bits = 128
+				}
+				mask := net.CIDRMask(bits, bits)
+				ipNets = append(ipNets, net.IPNet{IP: ip, Mask: mask})
 			}
 		}
 
@@ -166,11 +165,11 @@ func OVNEnsureAddressSets(s *state.State, l logger.Logger, client *ovn.NB, proje
 					}
 				}
 				if !found {
-					_, net, err := net.ParseCIDR(existingIP)
+					_, network, err := net.ParseCIDR(existingIP)
 					if err != nil {
 						return nil, fmt.Errorf("Failed parsing existing IP in set %s err: %w", existingIP, err)
 					}
-					removeIPv6 = append(removeIPv6, *net)
+					removeIPv6 = append(removeIPv6, *network)
 				}
 			}
 
@@ -224,7 +223,7 @@ func OVNAddressSetDeleteIfUnused(s *state.State, l logger.Logger, client *ovn.NB
 	return nil
 }
 
-// Return the set of address sets used by given ACLs
+// GetAddressSetsForACLs return the set of address sets used by given ACLs.
 func GetAddressSetsForACLs(s *state.State, projectName string, ACLNames []string) ([]string, error) {
 	var projectSetsNames []string
 	var setsNames []string
