@@ -1,4 +1,5 @@
 test_address_set() {
+  # shellcheck disable=2148
   ensure_import_testimage
   ensure_has_localhost_remote "${INCUS_ADDR}"
   
