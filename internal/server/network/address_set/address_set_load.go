@@ -26,7 +26,7 @@ func LoadByName(s *state.State, projectName string, name string) (NetworkAddress
 		return nil, err
 	}
 
-	var as NetworkAddressSet = &common{} // Only a single driver currently.
+	var as NetworkAddressSet = &common{}
 	as.init(s, id, projectName, asInfo)
 
 	return as, nil
@@ -34,7 +34,7 @@ func LoadByName(s *state.State, projectName string, name string) (NetworkAddress
 
 // Create validates supplied record and creates a new Network Address Set record in the database.
 func Create(s *state.State, projectName string, asInfo *api.NetworkAddressSetsPost) error {
-	var addrSet NetworkAddressSet = &common{} // Only a single driver currently.
+	var addrSet NetworkAddressSet = &common{}
 	addrSet.init(s, -1, projectName, nil)
 
 	err := addrSet.validateName(asInfo.Name)
@@ -115,7 +115,7 @@ func AddressSetUsedBy(s *state.State, projectName string, usageFunc func(aclName
 			return fmt.Errorf("Failed loading ACL %q: %w", aclName, err)
 		}
 
-		// Check all rules for reference to @addressSetName.
+		// Check all rules for reference to $addressSetName.
 		refFound := false
 
 		checkRule := func(rule api.NetworkACLRule) bool {
@@ -162,8 +162,7 @@ func AddressSetUsedBy(s *state.State, projectName string, usageFunc func(aclName
 	return nil
 }
 
-// subjectListReferences checks if the subject list (comma separated) references @addressSetName
-// We split by comma and trim space, check if any match "@addressSetName".
+// subjectListReferences checks if the subject list (comma separated) references $addressSetName
 func subjectListReferences(subjects string, addressSetName string) bool {
 	parts := util.SplitNTrimSpace(subjects, ",", -1, false)
 	needle := "$" + addressSetName
@@ -185,7 +184,7 @@ type AddressSetUsage struct {
 }
 
 func AddressSetNetworkUsage(s *state.State, projectName string, addressSetName string, addresses []string, asNets map[string]AddressSetUsage) error {
-	// 1. Get ACLs referencing this address set.
+	// Get ACLs referencing this address set.
 	aclNames := []string{}
 	err := AddressSetUsedBy(s, projectName, func(aclName string) error {
 		aclNames = append(aclNames, aclName)
@@ -195,7 +194,7 @@ func AddressSetNetworkUsage(s *state.State, projectName string, addressSetName s
 		return err
 	}
 
-	// Now get network usage from those ACLs. Reuse ACL's NetworkUsage function if it can handle partial usage.
+	// Now get network usage from those ACLs. Reuse ACL's NetworkUsage function.
 	aclNets := map[string]acl.NetworkACLUsage{}
 	err = acl.NetworkUsage(s, projectName, aclNames, aclNets)
 	if err != nil {
