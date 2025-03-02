@@ -35,7 +35,7 @@ Property         | Type       | Required | Description
 `addresses`      | string list| no       | Ingress traffic rules
 `external_ids`   | string set | no       | Configuration options as key/value pairs (only `user.*` custom keys supported)
 
-(manage-addresses-in-set=)
+(manage-addresses-in-set)=
 ## Add or remove addresses
 
 Adding addresses is pretty straightforward:
