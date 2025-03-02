@@ -41,7 +41,7 @@ type NetworkAddressSetsPost struct {
 }
 
 // NetworkAddressSet represents an address set.
-// Refer to doc/network-acls.md for details.
+// Refer to doc/howto/network_address_sets.md for details.
 //
 // swagger:model
 //
