@@ -5,12 +5,9 @@
 Network address sets are working with {ref}`ACLs <network-acls> and works only with {ref}`network-ovn` or with {ref}`bridged networks using nftables only <network-bridge-firewall>`.
 ```
 
-
 Network `Address Sets` are a list of either IPv4, IPv6 addresses with or without CIDR suffix. They can be used in Source or Destination field of {ref}`ACLs <rule-properties>`.
 
-
 ## Address Set Creation
-
 
 Use the following command to create an address set.
 
@@ -38,7 +35,6 @@ Property         | Type       | Required | Description
 `addresses`      | string list| no       | Ingress traffic rules
 `external_ids`   | string set | no       | Configuration options as key/value pairs (only `user.*` custom keys supported)
 
-
 (manage-addresses-in-set=)
 ## Add or remove addresses
 
@@ -51,7 +47,6 @@ incus network address-set add-addr <name> <address1> <address2>
 There is no restriction about the kind of address you are appending in your set, a mix of IPv4, IPv6 and CIDR can be used without disruption.
 
 In order to remove addresses we apply the same logic, however if you want to delete multiple addresses at the same time `--force` flag must be used:
-
 
 ```bash
 incus network address-set del-addr <name> <address1>
