@@ -99,12 +99,13 @@ func OVNEnsureAddressSets(s *state.State, l logger.Logger, client *ovn.NB, proje
 		if errors.Is(err, ovn.ErrNotFound) {
 			err = client.CreateAddressSet(context.TODO(), ovn.OVNAddressSet(asInfo.Name), ipNets...)
 			ipNetStrings := make([]string, len(ipNets))
-			for i, ipNet := range ipNets {
-				ipNetStrings[i] = ipNet.String()
-			}
 			if err != nil {
+				for i, ipNet := range ipNets {
+					ipNetStrings[i] = ipNet.String()
+				}
 				return nil, fmt.Errorf("Failed creating address set %q with networks %s in OVN: %w", asInfo.Name, strings.Join(ipNetStrings, "-"), err)
 			}
+			revert.Add(func() { _ = client.DeleteAddressSet(context.TODO(), ovn.OVNAddressSet(asInfo.Name))})
 		} else {
 			if err != nil && !errors.Is(err, ovn.ErrNotFound) {
 				return nil, fmt.Errorf("Failed fetching address set %q (IPv4) from OVN: %w", asInfo.Name, err)
@@ -189,6 +190,7 @@ func OVNEnsureAddressSets(s *state.State, l logger.Logger, client *ovn.NB, proje
 			}
 		}
 	}
+	cleanup := revert.Clone().Fail
 	revert.Success()
 	return nil, nil
 }
