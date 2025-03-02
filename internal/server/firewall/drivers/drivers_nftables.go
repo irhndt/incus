@@ -641,11 +641,17 @@ func (d Nftables) aclRulesToNftRules(hostName string, aclRules []ACLRule) (*nftR
 			var defaultRules []string
 			if rule.Direction == "egress" {
 				defaultRules, partial, err = d.aclRuleCriteriaToRules(hostNameQuoted, 4, &rule)
+				if len(defaultRules) > 1 {
+					return nil, fmt.Errorf("Default Rules slice as invalid len: %d", len(defaultRules))
+				}
 				nftRules.defaultInRule = defaultRules[0]
 				if err == nil && !partial && rule.Action == "reject" {
 					// Convert egress reject rules to drop rules to address nftables limitation.
 					rule.Action = "drop"
 					defaultRules, partial, err = d.aclRuleCriteriaToRules(hostNameQuoted, 4, &rule)
+					if len(defaultRules) > 1 {
+						return nil, fmt.Errorf("Default Rules slice as invalid len: %d", len(defaultRules))
+					}
 					nftRules.defaultInRuleConverted = defaultRules[0]
 				} else {
 					nftRules.defaultInRuleConverted = nftRules.defaultInRule
@@ -657,6 +663,9 @@ func (d Nftables) aclRulesToNftRules(hostName string, aclRules []ACLRule) (*nftR
 				}
 
 				defaultRules, partial, err = d.aclRuleCriteriaToRules(hostNameQuoted, 4, &rule)
+				if len(defaultRules) > 1 {
+					return nil, fmt.Errorf("Default Rules slice as invalid len: %d", len(defaultRules))
+				}
 				nftRules.defaultOutRule = defaultRules[0]
 			}
 
