@@ -64,7 +64,7 @@ type NftListSetsOutput struct {
 	Nftables []NftListSetsEntry `json:"nftables"`
 }
 
-// NftListSetsEntry strucutre to read JSON output of nft set listing.
+// NftListSetsEntry structure to read JSON output of nft set listing.
 type NftListSetsEntry struct {
 	Metainfo *NftMetainfo `json:"metainfo,omitempty"`
 	Set      *NftSet      `json:"set,omitempty"`
@@ -89,7 +89,7 @@ type NftSet struct {
 }
 
 // ElemField supports both string elements (IP, MAC) and dictionary-based CIDR elements.
-// In order to parse it correctly a custom unsmarshalling is defined in drivers_nftables.go
+// In order to parse it correctly a custom unsmarshalling is defined in drivers_nftables.go .
 type ElemField struct {
 	Addresses []string // Stores plain addresses and CIDR notations as strings.
 }
@@ -110,7 +110,7 @@ func (e *ElemField) UnmarshalJSON(data []byte) error {
 			// CIDR notation (prefix dictionary).
 			if prefix, ok := v["prefix"].(map[string]any); ok {
 				addr, addrOk := prefix["addr"].(string)
-				lenFloat, lenOk := prefix["len"].(float64) // JSON numbers are float64 by default
+				lenFloat, lenOk := prefix["len"].(float64) // JSON numbers are float64 by default.
 				if addrOk && lenOk {
 					e.Addresses = append(e.Addresses, fmt.Sprintf("%s/%d", addr, int(lenFloat)))
 				}
