@@ -26,7 +26,7 @@ Address sets follows the same rules than ACLs for naming:
 
 ### Address Set properties
 
-ACLs have the following properties:
+Address sets have the following properties:
 
 Property         | Type       | Required | Description
 :--              | :--        | :--      | :--
