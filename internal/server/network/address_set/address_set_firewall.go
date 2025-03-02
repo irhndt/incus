@@ -67,7 +67,7 @@ func FirewallAddressSets(s *state.State, addrSetDeviceName string, addrSetProjec
 	}
 	err = convertAddressSets(sets)
 	if err != nil {
-		return nil, fmt.Errorf("Failed converting address set %q for network %q: %w", setName, addrSetDeviceName, err)
+		return nil, fmt.Errorf("Failed converting address sets for network %q: %w", addrSetDeviceName, err)
 	}
 	return addressSets, nil
 }
