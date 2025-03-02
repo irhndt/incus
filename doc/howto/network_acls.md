@@ -126,7 +126,6 @@ To use one in a rule:
 source=\$<name>
 ```
 
-
 (network-acls-groups)=
 #### ACL groups
 
