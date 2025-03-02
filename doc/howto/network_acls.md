@@ -83,6 +83,7 @@ Incus automatically orders the rules based on the `action` property as follows:
 This means that when you apply multiple ACLs to a NIC, there is no need to specify a combined rule ordering.
 If one of the rules in the ACLs matches, the action for that rule is taken and no other rules are considered.
 
+(network-acls-rules-properties)=
 ### Rule properties
 
 ACL rules have the following properties:
@@ -111,6 +112,7 @@ The `source` field (for ingress rules) and the `destination` field (for egress r
 
 With this method, you can use ACL groups or network selectors to define rules for groups of instances without needing to maintain IP lists or create additional subnets.
 
+(network-acls-address-sets)=
 ### Use address sets in rules
 
 ```{note}
