@@ -18,7 +18,7 @@ import (
 // OVNEnsureAddressSetsViaACLs ensure that every address set referenced by given acls are created in OVN NB DB
 func OVNEnsureAddressSetsViaACLs(s *state.State, l logger.Logger, client *ovn.NB, projectName string, ACLNames []string) (revert.Hook, error) {
 	// Build address set usage from network ACLs
-	setsNames, err := GetAddressSetForACLs(s, projectName, ACLNames)
+	setsNames, err := GetAddressSetsForACLs(s, projectName, ACLNames)
 	if err != nil {
 		return nil, err
 	}
@@ -28,7 +28,7 @@ func OVNEnsureAddressSetsViaACLs(s *state.State, l logger.Logger, client *ovn.NB
 
 // OVNDeleteAddressSetsViaACLs remove address sets used by network ACLS
 func OVNDeleteAddressSetsViaACLs(s *state.State, l logger.Logger, client *ovn.NB, projectName string, ACLNames []string) error {
-	setsNames, err := GetAddressSetForACLs(s, projectName, ACLNames)
+	setsNames, err := GetAddressSetsForACLs(s, projectName, ACLNames)
 	if err != nil {
 		return err
 	}
@@ -225,7 +225,7 @@ func OVNAddressSetDeleteIfUnused(s *state.State, l logger.Logger, client *ovn.NB
 }
 
 // Return the set of address sets used by given ACLs
-func GetAddressSetForACLs(s *state.State, projectName string, ACLNames []string) ([]string, error) {
+func GetAddressSetsForACLs(s *state.State, projectName string, ACLNames []string) ([]string, error) {
 	var projectSetsNames []string
 	var setsNames []string
 	err := s.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
