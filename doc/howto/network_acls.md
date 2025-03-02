@@ -122,6 +122,7 @@ The `source` field (for ingress rules) and the `destination` field (for egress r
 With this feature you can create groups of addresses and / or networks to match rules against. You can eventually mix them with literals addresses and CIDRs.
 
 To use one in a rule:
+
 ```
 source=\$<name>
 ```
