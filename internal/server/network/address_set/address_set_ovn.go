@@ -105,7 +105,7 @@ func OVNEnsureAddressSets(s *state.State, l logger.Logger, client *ovn.NB, proje
 				}
 				return nil, fmt.Errorf("Failed creating address set %q with networks %s in OVN: %w", asInfo.Name, strings.Join(ipNetStrings, "-"), err)
 			}
-			revert.Add(func() { _ = client.DeleteAddressSet(context.TODO(), ovn.OVNAddressSet(asInfo.Name))})
+			revert.Add(func() { _ = client.DeleteAddressSet(context.TODO(), ovn.OVNAddressSet(asInfo.Name)) })
 		} else {
 			if err != nil && !errors.Is(err, ovn.ErrNotFound) {
 				return nil, fmt.Errorf("Failed fetching address set %q (IPv4) from OVN: %w", asInfo.Name, err)
@@ -192,7 +192,7 @@ func OVNEnsureAddressSets(s *state.State, l logger.Logger, client *ovn.NB, proje
 	}
 	cleanup := revert.Clone().Fail
 	revert.Success()
-	return nil, nil
+	return cleanup, nil
 }
 
 // OVNAddressSetDeleteIfUnused checks if the specified address set is unused and if so, removes it from OVN.
