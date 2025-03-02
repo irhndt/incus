@@ -27,7 +27,6 @@ func FirewallAddressSets(s *state.State, addrSetDeviceName string, addrSetProjec
 	// convertAddressSets convert the address set to a Firewall named set.
 	convertAddressSets := func(sets []*api.NetworkAddressSet) error {
 		for _, set := range sets {
-
 			firewallAddressSet := firewallDrivers.AddressSet{
 				Name:      set.Name,
 				Addresses: set.Addresses,
