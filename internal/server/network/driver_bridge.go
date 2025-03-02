@@ -1461,7 +1461,7 @@ func (n *bridge) setup(oldConfig map[string]string) error {
 		}
 
 		n.logger.Debug("Applying up firewall Address Sets")
-		err = address_set.FirewallApplyAddressSetRules(n.state, n.logger, n.Project(), asNet)
+		err = address_set.FirewallApplyAddressSetRules(n.state, n.Project(), asNet)
 		if err != nil {
 			return err
 		}
