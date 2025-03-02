@@ -1656,5 +1656,5 @@ func (d Xtables) NetworkApplyForwards(networkName string, rules []AddressForward
 }
 
 func (d Xtables) NetworkApplyAddressSets(networkName string, sets []AddressSet) error {
-	return fmt.Errorf("Address set are not implemented for xtables.")
+	return fmt.Errorf("Address sets are not implemented for xtables.")
 }
