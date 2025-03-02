@@ -121,7 +121,7 @@ This feature is supported only for the {ref}`bridge network using <network-bridg
 
 The `source` field (for ingress rules) and the `destination` field (for egress rules) support using address sets.
 
-With this feature you can create groups of addresses and / or networks to match rules against. You can eventually mix them with literals addresses and CIDRs.
+With this feature you can create groups of addresses and / or networks to match rules against. You can eventually mix them with literals addresses and CIDR.
 
 To use one in a rule:
 
