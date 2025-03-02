@@ -177,6 +177,10 @@ func (s *objectSuite) TestObjectFromString() {
 			out: Object("network_acl:default/acl1"),
 		},
 		{
+			in:  "network_address_set:default/as1",
+			out: Object("network_address_set:default/as1"),
+		},
+		{
 			in:  "network_zone:default/example.com",
 			out: Object("network_zone:default/example.com"),
 		},
