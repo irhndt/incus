@@ -1655,6 +1655,9 @@ func (d Xtables) NetworkApplyForwards(networkName string, rules []AddressForward
 	return nil
 }
 
+// Dummy function to be able to export NetworkApplyAddressSets in firewall driver
+// Do nothing is xtables is used
 func (d Xtables) NetworkApplyAddressSets(networkName string, sets []AddressSet) error {
-	return fmt.Errorf("Address sets are not implemented for xtables.")
+	logger.Debug("Address sets are not implemented for xtables.")
+	return nil
 }

@@ -346,9 +346,9 @@ func (c *ClusterTx) getProjectID(ctx context.Context, projectName string) (int64
 
 // GetNetworkAddressSetURIs returns the URIs for the network address sets with the given project.
 func (c *ClusterTx) GetNetworkAddressSetURIs(ctx context.Context, projectID int, project string) ([]string, error) {
-	sql := `SELECT networks_address_sets.name from networks_address_sets WHERE networks_address_sets.project_id = ?`
+	stmt := `SELECT networks_address_sets.name from networks_address_sets WHERE networks_address_sets.project_id = ?`
 
-	names, err := query.SelectStrings(ctx, c.tx, sql, projectID)
+	names, err := query.SelectStrings(ctx, c.tx, stmt, projectID)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to get URIs for network address sets: %w", err)
 	}

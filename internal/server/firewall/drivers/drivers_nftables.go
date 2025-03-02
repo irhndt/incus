@@ -1095,8 +1095,8 @@ func (d Nftables) aclRuleCriteriaToRules(networkName string, ipVersion uint, rul
 			if len(ruleFragments) > 0 {
 				// Combine each existing fragment with each destination fragment.
 				var combined [][]string
-				contains := func(slices [][]string, item []string) bool {
-					for _, s := range slices {
+				contains := func(fragMap [][]string, item []string) bool {
+					for _, s := range fragMap {
 						if strings.Join(s, " ") == strings.Join(item, " ") {
 							return true
 						}
@@ -1180,23 +1180,22 @@ func (d Nftables) aclRuleSubjectToACLMatch(direction string, ipVersion uint, sub
 			// Process literal address or range.
 			if validate.IsNetworkRange(subjectCriterion) == nil {
 				criterionParts := strings.SplitN(subjectCriterion, "-", 2)
-				if len(criterionParts) > 1 {
-					ip := net.ParseIP(criterionParts[0])
-					if ip != nil {
-						var subjectIPVersion uint = 4
-						if ip.To4() == nil {
-							subjectIPVersion = 6
-						}
-
-						if ipVersion != subjectIPVersion {
-							partial = true
-							continue // Skip subjects that are not for the ipVersion we are looking for.
-						}
-
-						literals = append(literals, fmt.Sprintf("%s-%s", criterionParts[0], criterionParts[1]))
-					}
-				} else {
+				if !(len(criterionParts) > 1) {
 					return nil, false, fmt.Errorf("Invalid IP range %q", subjectCriterion)
+				}
+				ip := net.ParseIP(criterionParts[0])
+				if ip != nil {
+					var subjectIPVersion uint = 4
+					if ip.To4() == nil {
+						subjectIPVersion = 6
+					}
+
+					if ipVersion != subjectIPVersion {
+						partial = true
+						continue // Skip subjects that are not for the ipVersion we are looking for.
+					}
+
+					literals = append(literals, fmt.Sprintf("%s-%s", criterionParts[0], criterionParts[1]))
 				}
 			} else {
 				ip := net.ParseIP(subjectCriterion)

@@ -59,21 +59,25 @@ type AddressSet struct {
 	Addresses []string
 }
 
-// Nft structures to read JSON output of set listing
+// NftListSetsOutput structure to read JSON output of set listing
 type NftListSetsOutput struct {
 	Nftables []NftListSetsEntry `json:"nftables"`
 }
+
+// NftListSetsEntry strucutre to read JSON output of nft set listing
 type NftListSetsEntry struct {
 	Metainfo *NftMetainfo `json:"metainfo,omitempty"`
 	Set      *NftSet      `json:"set,omitempty"`
 }
 
+// NftMetainfo structure representing metainformation returned by nft
 type NftMetainfo struct {
 	Version           string `json:"version"`
 	ReleaseName       string `json:"release_name"`
 	JSONSchemaVersion int    `json:"json_schema_version"`
 }
 
+// NftSet structure to parse the JSON of a set returned by nft -j list sets
 type NftSet struct {
 	Family string    `json:"family"`
 	Name   string    `json:"name"`
