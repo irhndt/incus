@@ -27,7 +27,7 @@ type common struct {
 }
 
 // init initialize internal variables.
-func (d *common) init(state *state.State, id int64, projectName string, info *api.NetworkAddressSet) {
+func (d *common) init(s *state.State, id int64, projectName string, info *api.NetworkAddressSet) {
 	if info == nil {
 		d.info = &api.NetworkAddressSet{}
 	} else {
@@ -37,7 +37,7 @@ func (d *common) init(state *state.State, id int64, projectName string, info *ap
 	d.logger = logger.AddContext(logger.Ctx{"project": projectName, "networkAddressSet": d.info.Name})
 	d.id = id
 	d.projectName = projectName
-	d.state = state
+	d.state = s
 
 	if d.info.Addresses == nil {
 		d.info.Addresses = []string{}
@@ -172,8 +172,8 @@ func (d *common) Update(config *api.NetworkAddressSetPut, clientType request.Cli
 		return err
 	}
 
-	revert := revert.New()
-	defer revert.Fail()
+	revertion := revert.New()
+	defer revertion.Fail()
 
 	if clientType == request.ClientTypeNormal {
 		oldConfig := d.info.NetworkAddressSetPut
@@ -188,7 +188,7 @@ func (d *common) Update(config *api.NetworkAddressSetPut, clientType request.Cli
 		// Apply changes internally and reinitialize.
 		d.info.NetworkAddressSetPut = *config
 		d.init(d.state, d.id, d.projectName, d.info)
-		revert.Add(func() {
+		revertion.Add(func() {
 			_ = d.state.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
 				return tx.UpdateNetworkAddressSet(ctx, d.projectName, d.info.Name, &oldConfig)
 			})
@@ -218,7 +218,7 @@ func (d *common) Update(config *api.NetworkAddressSetPut, clientType request.Cli
 	// Apply address set changes to non-OVN networks on this member.
 	if len(asNets) > 0 {
 		for _, asNet := range asNets {
-			err = FirewallApplyAddressSetRules(d.state, d.logger, d.projectName, asNet)
+			err = FirewallApplyAddressSetRules(d.state, d.projectName, asNet)
 			if err != nil {
 				return err
 			}
@@ -237,7 +237,7 @@ func (d *common) Update(config *api.NetworkAddressSetPut, clientType request.Cli
 			return fmt.Errorf("Failed ensuring address set %q is configured in OVN: %w", d.info.Name, err)
 		}
 
-		revert.Add(cleanup)
+		revertion.Add(cleanup)
 	}
 
 	// If normal request and asNets is not empty, notify other cluster members.
@@ -256,7 +256,7 @@ func (d *common) Update(config *api.NetworkAddressSetPut, clientType request.Cli
 		}
 	}
 
-	revert.Success()
+	revertion.Success()
 	return nil
 }
 
@@ -331,7 +331,7 @@ func (d *common) Delete() error {
 	}
 	if len(asNets) > 0 {
 		for _, asNet := range asNets {
-			err = FirewallApplyAddressSetRules(d.state, d.logger, d.projectName, asNet)
+			err = FirewallApplyAddressSetRules(d.state, d.projectName, asNet)
 			if err != nil {
 				return err
 			}

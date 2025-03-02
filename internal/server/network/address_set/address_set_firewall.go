@@ -8,11 +8,10 @@ import (
 	firewallDrivers "github.com/lxc/incus/v6/internal/server/firewall/drivers"
 	"github.com/lxc/incus/v6/internal/server/state"
 	"github.com/lxc/incus/v6/shared/api"
-	"github.com/lxc/incus/v6/shared/logger"
 )
 
 // FirewallApplyAddressSetRules applies Address Set rules to the network firewall.
-func FirewallApplyAddressSetRules(s *state.State, logger logger.Logger, projectName string, addressSet AddressSetUsage) error {
+func FirewallApplyAddressSetRules(s *state.State, projectName string, addressSet AddressSetUsage) error {
 	sets, err := FirewallAddressSets(s, addressSet.Name, projectName)
 	if err != nil {
 		return err

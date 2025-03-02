@@ -47,8 +47,8 @@ func OVNDeleteAddressSetsViaACLs(s *state.State, l logger.Logger, client *ovn.NB
 // OVNEnsureAddressSets ensures that the address sets and their addresses are created in OVN NB DB.
 // Returns a revert function to undo changes if needed.
 func OVNEnsureAddressSets(s *state.State, l logger.Logger, client *ovn.NB, projectName string, addressSetNames []string) (revert.Hook, error) {
-	revert := revert.New()
-	defer revert.Fail()
+	revertion := revert.New()
+	defer revertion.Fail()
 
 	for _, addressSetName := range addressSetNames {
 		addrSet, err := LoadByName(s, projectName, addressSetName)
@@ -104,7 +104,7 @@ func OVNEnsureAddressSets(s *state.State, l logger.Logger, client *ovn.NB, proje
 				}
 				return nil, fmt.Errorf("Failed creating address set %q with networks %s in OVN: %w", asInfo.Name, strings.Join(ipNetStrings, "-"), err)
 			}
-			revert.Add(func() { _ = client.DeleteAddressSet(context.TODO(), ovn.OVNAddressSet(asInfo.Name)) })
+			revertion.Add(func() { _ = client.DeleteAddressSet(context.TODO(), ovn.OVNAddressSet(asInfo.Name)) })
 		} else {
 			if err != nil && !errors.Is(err, ovn.ErrNotFound) {
 				return nil, fmt.Errorf("Failed fetching address set %q (IPv4) from OVN: %w", asInfo.Name, err)
@@ -189,8 +189,8 @@ func OVNEnsureAddressSets(s *state.State, l logger.Logger, client *ovn.NB, proje
 			}
 		}
 	}
-	cleanup := revert.Clone().Fail
-	revert.Success()
+	cleanup := revertion.Clone().Fail
+	revertion.Success()
 	return cleanup, nil
 }
 

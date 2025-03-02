@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -16,10 +17,12 @@ import (
 	"github.com/lxc/incus/v6/shared/termios"
 )
 
+// cmdNetworkAddressSet represents the global network address set command.
 type cmdNetworkAddressSet struct {
 	global *cmdGlobal
 }
 
+// Command initializes the base network address set command and its subcommands.
 func (c *cmdNetworkAddressSet) Command() *cobra.Command {
 	cmd := &cobra.Command{}
 	cmd.Use = usage("address-set")
@@ -72,7 +75,7 @@ func (c *cmdNetworkAddressSet) Command() *cobra.Command {
 	return cmd
 }
 
-// List
+// cmdNetworkAddressSetList defines the structure for listing network address sets.
 type cmdNetworkAddressSetList struct {
 	global            *cmdGlobal
 	networkAddressSet *cmdNetworkAddressSet
@@ -81,6 +84,7 @@ type cmdNetworkAddressSetList struct {
 	flagAllProjects bool
 }
 
+// Command initializes the list subcommand.
 func (c *cmdNetworkAddressSetList) Command() *cobra.Command {
 	cmd := &cobra.Command{}
 	cmd.Use = usage("list", i18n.G("[<remote>:]"))
@@ -103,6 +107,7 @@ func (c *cmdNetworkAddressSetList) Command() *cobra.Command {
 	return cmd
 }
 
+// Run executes the list command logic.
 func (c *cmdNetworkAddressSetList) Run(cmd *cobra.Command, args []string) error {
 	// Quick checks.
 	exit, err := c.global.CheckArgs(cmd, args, 0, 1)
@@ -168,12 +173,13 @@ func (c *cmdNetworkAddressSetList) Run(cmd *cobra.Command, args []string) error 
 	return cli.RenderTable(os.Stdout, c.flagFormat, header, data, sets)
 }
 
-// Show
+// cmdNetworkAddressSetShow defines the structure for showing a network address set.
 type cmdNetworkAddressSetShow struct {
 	global            *cmdGlobal
 	networkAddressSet *cmdNetworkAddressSet
 }
 
+// Command initializes the show subcommand.
 func (c *cmdNetworkAddressSetShow) Command() *cobra.Command {
 	cmd := &cobra.Command{}
 	cmd.Use = usage("show", i18n.G("[<remote>:]<address-set>"))
@@ -192,6 +198,7 @@ func (c *cmdNetworkAddressSetShow) Command() *cobra.Command {
 	return cmd
 }
 
+// Run executes the show command logic.
 func (c *cmdNetworkAddressSetShow) Run(cmd *cobra.Command, args []string) error {
 	exit, err := c.global.CheckArgs(cmd, args, 1, 1)
 	if exit {
@@ -205,7 +212,7 @@ func (c *cmdNetworkAddressSetShow) Run(cmd *cobra.Command, args []string) error 
 
 	resource := resources[0]
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network address set name"))
+		return errors.New(i18n.G("Missing network address set name"))
 	}
 
 	addrSet, _, err := resource.server.GetNetworkAddressSet(resource.name)
@@ -224,7 +231,7 @@ func (c *cmdNetworkAddressSetShow) Run(cmd *cobra.Command, args []string) error 
 	return nil
 }
 
-// Create
+// cmdNetworkAddressSetCreate defines the structure for creating a network address set.
 type cmdNetworkAddressSetCreate struct {
 	global            *cmdGlobal
 	networkAddressSet *cmdNetworkAddressSet
@@ -232,6 +239,7 @@ type cmdNetworkAddressSetCreate struct {
 	flagDescription string
 }
 
+// Command initializes the create subcommand.
 func (c *cmdNetworkAddressSetCreate) Command() *cobra.Command {
 	cmd := &cobra.Command{}
 	cmd.Use = usage("create", i18n.G("[<remote>:]<address-set> [key=value...]"))
@@ -255,6 +263,7 @@ incus network address-set create as1 < config.yaml
 	return cmd
 }
 
+// Run executes the create command logic.
 func (c *cmdNetworkAddressSetCreate) Run(cmd *cobra.Command, args []string) error {
 	exit, err := c.global.CheckArgs(cmd, args, 1, -1)
 	if exit {
@@ -268,7 +277,7 @@ func (c *cmdNetworkAddressSetCreate) Run(cmd *cobra.Command, args []string) erro
 
 	resource := resources[0]
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network address set name"))
+		return errors.New(i18n.G("Missing network address set name"))
 	}
 
 	var asPut api.NetworkAddressSetPut
@@ -324,7 +333,7 @@ func (c *cmdNetworkAddressSetCreate) Run(cmd *cobra.Command, args []string) erro
 	return nil
 }
 
-// Set
+// cmdNetworkAddressSetSet defines the structure for setting network address set configuration.
 type cmdNetworkAddressSetSet struct {
 	global            *cmdGlobal
 	networkAddressSet *cmdNetworkAddressSet
@@ -332,6 +341,7 @@ type cmdNetworkAddressSetSet struct {
 	flagIsProperty bool
 }
 
+// Command initializes the set subcommand.
 func (c *cmdNetworkAddressSetSet) Command() *cobra.Command {
 	cmd := &cobra.Command{}
 	cmd.Use = usage("set", i18n.G("[<remote>:]<address-set> <key>=<value>..."))
@@ -352,6 +362,7 @@ func (c *cmdNetworkAddressSetSet) Command() *cobra.Command {
 	return cmd
 }
 
+// Run executes the set command logic.
 func (c *cmdNetworkAddressSetSet) Run(cmd *cobra.Command, args []string) error {
 	exit, err := c.global.CheckArgs(cmd, args, 2, -1)
 	if exit {
@@ -365,7 +376,7 @@ func (c *cmdNetworkAddressSetSet) Run(cmd *cobra.Command, args []string) error {
 
 	resource := resources[0]
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network address set name"))
+		return errors.New(i18n.G("Missing network address set name"))
 	}
 
 	// Get current address set
@@ -398,7 +409,7 @@ func (c *cmdNetworkAddressSetSet) Run(cmd *cobra.Command, args []string) error {
 	return resource.server.UpdateNetworkAddressSet(resource.name, writable, etag)
 }
 
-// Unset
+// cmdNetworkAddressSetUnset defines the structure for unsetting network address set configuration keys.
 type cmdNetworkAddressSetUnset struct {
 	global               *cmdGlobal
 	networkAddressSet    *cmdNetworkAddressSet
@@ -407,6 +418,7 @@ type cmdNetworkAddressSetUnset struct {
 	flagIsProperty bool
 }
 
+// Command initializes the unset subcommand.
 func (c *cmdNetworkAddressSetUnset) Command() *cobra.Command {
 	cmd := &cobra.Command{}
 	cmd.Use = usage("unset", i18n.G("[<remote>:]<address-set> <key>"))
@@ -430,6 +442,7 @@ func (c *cmdNetworkAddressSetUnset) Command() *cobra.Command {
 	return cmd
 }
 
+// Run executes the unset command logic.
 func (c *cmdNetworkAddressSetUnset) Run(cmd *cobra.Command, args []string) error {
 	exit, err := c.global.CheckArgs(cmd, args, 2, 2)
 	if exit {
@@ -441,12 +454,13 @@ func (c *cmdNetworkAddressSetUnset) Run(cmd *cobra.Command, args []string) error
 	return c.networkAddressSetSet.Run(cmd, args)
 }
 
-// Edit
+// cmdNetworkAddressSetEdit defines the structure for editing a network address set.
 type cmdNetworkAddressSetEdit struct {
 	global            *cmdGlobal
 	networkAddressSet *cmdNetworkAddressSet
 }
 
+// Command initializes the edit subcommand.
 func (c *cmdNetworkAddressSetEdit) Command() *cobra.Command {
 	cmd := &cobra.Command{}
 	cmd.Use = usage("edit", i18n.G("[<remote>:]<address-set>"))
@@ -465,6 +479,7 @@ func (c *cmdNetworkAddressSetEdit) Command() *cobra.Command {
 	return cmd
 }
 
+// helpTemplate provides a YAML template for editing address sets.
 func (c *cmdNetworkAddressSetEdit) helpTemplate() string {
 	return i18n.G(
 		`### This is a YAML representation of the network address set.
@@ -481,6 +496,7 @@ func (c *cmdNetworkAddressSetEdit) helpTemplate() string {
 `)
 }
 
+// Run executes the edit command logic.
 func (c *cmdNetworkAddressSetEdit) Run(cmd *cobra.Command, args []string) error {
 	exit, err := c.global.CheckArgs(cmd, args, 1, 1)
 	if exit {
@@ -559,12 +575,13 @@ func (c *cmdNetworkAddressSetEdit) Run(cmd *cobra.Command, args []string) error 
 	return nil
 }
 
-// Rename
+// cmdNetworkAddressSetRename defines the structure for renaming a network address set.
 type cmdNetworkAddressSetRename struct {
 	global            *cmdGlobal
 	networkAddressSet *cmdNetworkAddressSet
 }
 
+// Command initializes the rename subcommand.
 func (c *cmdNetworkAddressSetRename) Command() *cobra.Command {
 	cmd := &cobra.Command{}
 	cmd.Use = usage("rename", i18n.G("[<remote>:]<address-set> <new-name>"))
@@ -584,6 +601,7 @@ func (c *cmdNetworkAddressSetRename) Command() *cobra.Command {
 	return cmd
 }
 
+// Run executes the rename command logic.
 func (c *cmdNetworkAddressSetRename) Run(cmd *cobra.Command, args []string) error {
 	exit, err := c.global.CheckArgs(cmd, args, 2, 2)
 	if exit {
@@ -612,12 +630,13 @@ func (c *cmdNetworkAddressSetRename) Run(cmd *cobra.Command, args []string) erro
 	return nil
 }
 
-// Delete
+// cmdNetworkAddressSetDelete defines the structure for deleting a network address set.
 type cmdNetworkAddressSetDelete struct {
 	global            *cmdGlobal
 	networkAddressSet *cmdNetworkAddressSet
 }
 
+// Command initializes the delete subcommand.
 func (c *cmdNetworkAddressSetDelete) Command() *cobra.Command {
 	cmd := &cobra.Command{}
 	cmd.Use = usage("delete", i18n.G("[<remote>:]<address-set>"))
@@ -637,6 +656,7 @@ func (c *cmdNetworkAddressSetDelete) Command() *cobra.Command {
 	return cmd
 }
 
+// Run executes the delete command logic.
 func (c *cmdNetworkAddressSetDelete) Run(cmd *cobra.Command, args []string) error {
 	exit, err := c.global.CheckArgs(cmd, args, 1, 1)
 	if exit {
@@ -665,12 +685,13 @@ func (c *cmdNetworkAddressSetDelete) Run(cmd *cobra.Command, args []string) erro
 	return nil
 }
 
-// Add addresses
+// cmdNetworkAddressSetAddAddr defines the structure for adding addresses to a network address set.
 type cmdNetworkAddressSetAddAddr struct {
 	global            *cmdGlobal
 	networkAddressSet *cmdNetworkAddressSet
 }
 
+// Command initializes the add-addr subcommand.
 func (c *cmdNetworkAddressSetAddAddr) Command() *cobra.Command {
 	cmd := &cobra.Command{}
 	cmd.Use = usage("add-addr", i18n.G("[<remote>:]<address-set> <address>..."))
@@ -689,6 +710,7 @@ func (c *cmdNetworkAddressSetAddAddr) Command() *cobra.Command {
 	return cmd
 }
 
+// Run executes the add-addr command logic.
 func (c *cmdNetworkAddressSetAddAddr) Run(cmd *cobra.Command, args []string) error {
 	exit, err := c.global.CheckArgs(cmd, args, 2, -1)
 	if exit {
@@ -716,13 +738,14 @@ func (c *cmdNetworkAddressSetAddAddr) Run(cmd *cobra.Command, args []string) err
 	return resource.server.UpdateNetworkAddressSet(resource.name, addrSet.Writable(), etag)
 }
 
-// Remove addresses
+// cmdNetworkAddressSetRemoveAddr defines the structure for removing addresses from a network address set.
 type cmdNetworkAddressSetRemoveAddr struct {
 	global            *cmdGlobal
 	networkAddressSet *cmdNetworkAddressSet
 	flagForce         bool
 }
 
+// Command initializes the del-addr subcommand.
 func (c *cmdNetworkAddressSetRemoveAddr) Command() *cobra.Command {
 	cmd := &cobra.Command{}
 	cmd.Use = usage("del-addr", i18n.G("[<remote>:]<address-set> <address>..."))
@@ -742,6 +765,7 @@ func (c *cmdNetworkAddressSetRemoveAddr) Command() *cobra.Command {
 	return cmd
 }
 
+// Run executes the del-addr command logic.
 func (c *cmdNetworkAddressSetRemoveAddr) Run(cmd *cobra.Command, args []string) error {
 	exit, err := c.global.CheckArgs(cmd, args, 2, -1)
 	if exit {
