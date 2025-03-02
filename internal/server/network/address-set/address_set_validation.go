@@ -1,4 +1,4 @@
-package address_set
+package addressSet
 
 import (
 	"fmt"

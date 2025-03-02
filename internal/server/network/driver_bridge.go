@@ -29,7 +29,7 @@ import (
 	firewallDrivers "github.com/lxc/incus/v6/internal/server/firewall/drivers"
 	"github.com/lxc/incus/v6/internal/server/ip"
 	"github.com/lxc/incus/v6/internal/server/network/acl"
-	"github.com/lxc/incus/v6/internal/server/network/address_set"
+	addressSet "github.com/lxc/incus/v6/internal/server/network/address-set"
 	"github.com/lxc/incus/v6/internal/server/project"
 	localUtil "github.com/lxc/incus/v6/internal/server/util"
 	"github.com/lxc/incus/v6/internal/server/warnings"
@@ -1453,7 +1453,7 @@ func (n *bridge) setup(oldConfig map[string]string) error {
 	// Setup named sets for nft firewall
 	// We apply all available address sets to avoid missing some
 	if fwOpts.AddressSet {
-		asNet := address_set.AddressSetUsage{
+		asNet := addressSet.AddressSetUsage{
 			Name:   n.Name(),
 			Type:   n.Type(),
 			ID:     n.ID(),
@@ -1461,7 +1461,7 @@ func (n *bridge) setup(oldConfig map[string]string) error {
 		}
 
 		n.logger.Debug("Applying up firewall Address Sets")
-		err = address_set.FirewallApplyAddressSetRules(n.state, n.Project(), asNet)
+		err = addressSet.FirewallApplyAddressSetRules(n.state, n.Project(), asNet)
 		if err != nil {
 			return err
 		}

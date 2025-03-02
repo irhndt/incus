@@ -1,4 +1,4 @@
-package address_set
+package addressSet
 
 import (
 	"github.com/lxc/incus/v6/internal/server/cluster/request"
@@ -9,7 +9,7 @@ import (
 // NetworkAddressSet represents a Network Address Set.
 type NetworkAddressSet interface {
 	// Initialize.
-	init(state *state.State, id int64, projectName string, info *api.NetworkAddressSet)
+	init(s *state.State, id int64, projectName string, info *api.NetworkAddressSet)
 
 	// Info
 	ID() int64
