@@ -1,4 +1,4 @@
-package addressSet
+package addressset
 
 import (
 	"context"

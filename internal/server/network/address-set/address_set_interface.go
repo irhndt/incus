@@ -1,4 +1,4 @@
-package addressSet
+package addressset
 
 import (
 	"github.com/lxc/incus/v6/internal/server/cluster/request"
