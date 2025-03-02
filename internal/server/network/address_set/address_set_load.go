@@ -183,6 +183,7 @@ type AddressSetUsage struct {
 	Config    map[string]string
 }
 
+// AddressSetNetworkUsage retrieve the networks that use an address set by checking ACLs
 func AddressSetNetworkUsage(s *state.State, projectName string, addressSetName string, addresses []string, asNets map[string]AddressSetUsage) error {
 	// Get ACLs referencing this address set.
 	aclNames := []string{}

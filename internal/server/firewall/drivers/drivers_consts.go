@@ -71,7 +71,7 @@ type NftListSetsEntry struct {
 type NftMetainfo struct {
 	Version           string `json:"version"`
 	ReleaseName       string `json:"release_name"`
-	JsonSchemaVersion int    `json:"json_schema_version"`
+	JSONSchemaVersion int    `json:"json_schema_version"`
 }
 
 type NftSet struct {
@@ -92,7 +92,7 @@ type ElemField struct {
 
 // UnmarshalJSON handles both plain strings and CIDR dictionaries inside `elem`.
 func (e *ElemField) UnmarshalJSON(data []byte) error {
-	var rawElems []interface{}
+	var rawElems []any
 	if err := json.Unmarshal(data, &rawElems); err != nil {
 		return err
 	}
@@ -102,9 +102,9 @@ func (e *ElemField) UnmarshalJSON(data []byte) error {
 		case string:
 			// Plain address (IPv4, IPv6, or MAC).
 			e.Addresses = append(e.Addresses, v)
-		case map[string]interface{}:
+		case map[string]any:
 			// CIDR notation (prefix dictionary).
-			if prefix, ok := v["prefix"].(map[string]interface{}); ok {
+			if prefix, ok := v["prefix"].(map[string]any); ok {
 				addr, addrOk := prefix["addr"].(string)
 				lenFloat, lenOk := prefix["len"].(float64) // JSON numbers are float64 by default
 				if addrOk && lenOk {

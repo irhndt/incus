@@ -149,11 +149,11 @@ func OVNEnsureAddressSets(s *state.State, l logger.Logger, client *ovn.NB, proje
 				}
 				if !found {
 					// OVN always register CIDR in address set
-					_, net, err := net.ParseCIDR(existingIP)
+					_, network, err := net.ParseCIDR(existingIP)
 					if err != nil {
 						return nil, fmt.Errorf("Failed parsing existing IP in set %s err: %w", existingIP, err)
 					}
-					removeIPv4 = append(removeIPv4, *net)
+					removeIPv4 = append(removeIPv4, *network)
 				}
 			}
 

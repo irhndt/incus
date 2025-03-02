@@ -154,7 +154,6 @@ func (d *common) validateAddresses(addresses []string) error {
 
 // validateConfig checks the entire config including name and addresses.
 func (d *common) validateConfig(config *api.NetworkAddressSetPut) error {
-
 	err := d.validateAddresses(config.Addresses)
 	if err != nil {
 		return fmt.Errorf("Invalid addresses: %w", err)
@@ -166,6 +165,7 @@ func (d *common) validateConfig(config *api.NetworkAddressSetPut) error {
 	return nil
 }
 
+// Update method is used to update an address set and apply to concerned networks
 func (d *common) Update(config *api.NetworkAddressSetPut, clientType request.ClientType) error {
 	err := d.validateConfig(config)
 	if err != nil {
@@ -260,6 +260,7 @@ func (d *common) Update(config *api.NetworkAddressSetPut, clientType request.Cli
 	return nil
 }
 
+// Rename is used to rename an address set
 func (d *common) Rename(newName string) error {
 	err := d.validateName(newName)
 	if err != nil {

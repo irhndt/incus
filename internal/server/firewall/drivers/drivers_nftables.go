@@ -634,7 +634,7 @@ func (d Nftables) aclRulesToNftRules(hostName string, aclRules []ACLRule) (*nftR
 		if i >= rulesCount-2 {
 			// The last two rules are the default ACL rules and we should keep them separate.
 			// As aclRuleCriteriaToRules return a set of rules instead of a rule to manage address sets in source / dests
-			// We use rules[0] for default rules beacuse I guess those rules do not use address sets and will be in one fragment
+			// We use rules[0] for default rules because I guess those rules do not use address sets and will be in one fragment
 			// Reviewer needs to ensure we are okay with that
 			var partial bool
 			var err error

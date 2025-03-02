@@ -1460,12 +1460,11 @@ func (n *bridge) setup(oldConfig map[string]string) error {
 			Config: n.Config(),
 		}
 
-		n.logger.Debug("Applying up firewall Adress Sets")
+		n.logger.Debug("Applying up firewall Address Sets")
 		err = address_set.FirewallApplyAddressSetRules(n.state, n.logger, n.Project(), asNet)
 		if err != nil {
 			return err
 		}
-
 	}
 	if fwOpts.ACL {
 		aclNet := acl.NetworkACLUsage{
