@@ -53,6 +53,12 @@ type network_acl
     define can_edit: [user, group#member] or operator from project
     define can_view: [user, group#member] or can_edit or viewer from project
 
+type network_address_set
+  relations
+    define project: [project]
+    define can_edit: [user, group#member] or operator from project
+    define can_view: [user, group#member] or can_edit or viewer from project
+
 type network_integration
   relations
     define server: [server]
