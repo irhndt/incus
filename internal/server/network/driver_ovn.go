@@ -2767,13 +2767,6 @@ func (n *ovn) setup(update bool) error {
 
 	// Ensure any network assigned security ACL port groups are created ready for instance NICs to use.
 	securityACLS := util.SplitNTrimSpace(n.config["security.acls"], ",", -1, true)
-	// Load address sets referenced by ACLs
-	//time.Sleep(time.Second * 15)
-	//cleanup, err := address_set.OVNEnsureAddressSetsViaACLs(n.state, n.logger, n.ovnnb, n.Project(), securityACLS)
-	//if err != nil {
-	//	return fmt.Errorf("Failed ensuring address sets for security ACLs are configured in OVN for network: %w", err)
-	//}
-	//revert.Add(cleanup)
 
 	if len(securityACLS) > 0 {
 		var aclNameIDs map[string]int64
