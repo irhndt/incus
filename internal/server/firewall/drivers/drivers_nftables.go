@@ -1139,12 +1139,6 @@ func (d Nftables) aclRuleCriteriaToRules(networkName string, ipVersion uint, rul
 		return nil, overallPartial, err
 	}
 
-	// If we have empty fragments we have either no ipVersion criterias
-	// Or we have an empty acl with no rules
-	//if len(ruleFragments) == 0 && rule.Action == "reject" {
-	//	return []string{strings.Join(append(baseArgs, rule.Action), " ")}, overallPartial, nil
-	//}
-
 	// Append the common suffix parts to every fragment.
 	for _, frag := range ruleFragments {
 		fullFrag := append(frag, suffixParts)
@@ -1176,7 +1170,7 @@ func (d Nftables) aclRuleCriteriaToRules(networkName string, ipVersion uint, rul
 
 					// Otherwise it means this is just a blanket ICMP rule and is only appropriate for use
 					// with the corresponding ipVersion nft command.
-					return nil, overallPartial, nil // Rule is not appropriate for ipVersion.
+					return nil, true, nil // Rule is not appropriate for ipVersion.
 				}
 
 				if strings.Contains(ruleString, fmt.Sprintf("_ipv%d", ipVersion)) {
