@@ -1134,6 +1134,10 @@ func (d Nftables) aclRuleCriteriaToRules(networkName string, ipVersion uint, rul
 		return nil, overallPartial, err
 	}
 
+	if len(ruleFragments) == 0 {
+		return []string{strings.Join(append(baseArgs, rule.Action), " ")}, overallPartial, nil
+	}
+
 	// Append the common suffix parts to every fragment.
 	for _, frag := range ruleFragments {
 		fullFrag := append(frag, suffixParts)
@@ -1501,7 +1505,7 @@ func (d Nftables) NetworkApplyAddressSets(networkName string, sets []AddressSet)
 				continue
 			}
 
-			// Try MAC
+			// Try MAC perhaps future support
 			_, err = net.ParseMAC(addr)
 			if err == nil {
 				ethAddrs = append(ethAddrs, addr)
@@ -1513,9 +1517,15 @@ func (d Nftables) NetworkApplyAddressSets(networkName string, sets []AddressSet)
 
 		// If no addresses, still create empty sets to avoid errors.
 		if len(addresses) == 0 {
-			ipv4Addrs = []string{}
-			ipv6Addrs = []string{}
-			ethAddrs = []string{}
+			for _, ipV := range []string{"4", "6"} {
+				config := &strings.Builder{}
+				fmt.Fprintf(config, "add set inet %s ", nftablesNamespace)
+				fmt.Fprintf(config, " %s_ipv%s {\n    type ipv4_addr;\n  flags interval;\n}\n", name, ipV)
+				err := subprocess.RunCommandWithFds(context.TODO(), strings.NewReader(config.String()), nil, "nft", "-f", "-")
+				if err != nil {
+					return fmt.Errorf("failed to create empty nft sets for address set %q: %w", name, err)
+				}
+			}
 		}
 
 		// Build NFT config.
@@ -1523,37 +1533,52 @@ func (d Nftables) NetworkApplyAddressSets(networkName string, sets []AddressSet)
 		configv6 := &strings.Builder{}
 		configeth := &strings.Builder{}
 
-		if len(ipv4Addrs) > 0 {
-			// Create IPv4 set and flush it if it already exists
+		if len(ipv4Addrs) >= 0 {
+			// Create v4 named set
 			fmt.Fprintf(configv4, "add set inet %s ", nftablesNamespace)
 			setExtendedName := fmt.Sprintf("%s_ipv4", name)
+			if len(ipv4Addrs) == 0 {
+				// Create empty set to avoid errors
+				fmt.Fprintf(configv4, " %s {\n    type ipv4_addr;\n  flags interval;\n}\n", setExtendedName)
+			} else {
+				fmt.Fprintf(configv4, " %s {\n    type ipv4_addr;\n  flags interval;\n  elements = { %s }\n  }\n", setExtendedName, strings.Join(ipv4Addrs, ", "))
+			}
 
-			// Create v4 named set
-			fmt.Fprintf(configv4, " %s {\n    type ipv4_addr;\n  flags interval;\n  elements = { %s }\n  }\n", setExtendedName, strings.Join(ipv4Addrs, ", "))
 			err := subprocess.RunCommandWithFds(context.TODO(), strings.NewReader(configv4.String()), nil, "nft", "-f", "-")
 			if err != nil {
 				return fmt.Errorf("failed to apply nft sets for address set %q: %w", name, err)
 			}
 		}
-		if len(ipv6Addrs) > 0 {
-			// Create IPv6 set and flush it if it already exists
+
+		if len(ipv6Addrs) >= 0 {
 			fmt.Fprintf(configv6, "add set inet %s ", nftablesNamespace)
 			setExtendedName := fmt.Sprintf("%s_ipv6", name)
 			// Create v6 named set
-			fmt.Fprintf(configv6, " %s {\n    type ipv6_addr;\n  flags interval;\n  elements = { %s }\n  }\n", setExtendedName, strings.Join(ipv6Addrs, ", "))
+			if len(ipv6Addrs) == 0 {
+				// Create empty set to avoid errors
+				fmt.Fprintf(configv6, " %s {\n    type ipv6_addr;\n  flags interval;\n}\n", setExtendedName)
+			} else {
+				fmt.Fprintf(configv6, " %s {\n    type ipv6_addr;\n  flags interval;\n  elements = { %s }\n  }\n", setExtendedName, strings.Join(ipv6Addrs, ", "))
+			}
+
 			err := subprocess.RunCommandWithFds(context.TODO(), strings.NewReader(configv6.String()), nil, "nft", "-f", "-")
 			if err != nil {
 				return fmt.Errorf("failed to apply nft sets for address set %q: %w", name, err)
 			}
 		}
+
+		// Should be >= but since we do not support it fr now leave it as a dead portion
 		if len(ethAddrs) > 0 {
-			// Create Ethernet set
 			fmt.Fprintf(configeth, "add set inet %s ", nftablesNamespace)
 			setExtendedName := fmt.Sprintf("%s_eth", name)
-			// Create eth named set
-			fmt.Fprintf(configeth, "  set %s_eth {\n    type ether_addr;\n    elements = { %s }\n  }\n", setExtendedName, strings.Join(ethAddrs, ", "))
-			err := subprocess.RunCommandWithFds(context.TODO(), strings.NewReader(configv6.String()), nil, "nft", "-f", "-")
+			// Create eth named set perhaps future support
+			if len(ethAddrs) == 0 {
+				fmt.Fprintf(configeth, "  set %s {\n    type ether_addr;\n}\n", setExtendedName)
+			} else {
+				fmt.Fprintf(configeth, "  set %s {\n    type ether_addr;\n    elements = { %s }\n  }\n", setExtendedName, strings.Join(ethAddrs, ", "))
+			}
 
+			err := subprocess.RunCommandWithFds(context.TODO(), strings.NewReader(configv6.String()), nil, "nft", "-f", "-")
 			if err != nil {
 				return fmt.Errorf("failed to apply nft sets for address set %q: %w", name, err)
 			}
