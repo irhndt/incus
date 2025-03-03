@@ -38,6 +38,7 @@ func (r *ProtocolIncus) GetNetworkAddressSets() ([]api.NetworkAddressSet, error)
 	if err != nil {
 		return nil, err
 	}
+
 	return addressSets, nil
 }
 

@@ -41,6 +41,7 @@ func OVNDeleteAddressSetsViaACLs(s *state.State, l logger.Logger, client *ovn.NB
 
 		l.Debug("Removed unused address set from OVN", logger.Ctx{"project": projectName, "addressSet": setName})
 	}
+
 	return nil
 }
 
@@ -67,6 +68,7 @@ func OVNEnsureAddressSets(s *state.State, l logger.Logger, client *ovn.NB, proje
 				if err != nil {
 					return nil, fmt.Errorf("Failed parsing CIDR address %q: %w", addr, err)
 				}
+
 				ipNets = append(ipNets, *ipnet)
 			} else {
 				// If single IP address, convert to /32 or /128.
@@ -80,12 +82,15 @@ func OVNEnsureAddressSets(s *state.State, l logger.Logger, client *ovn.NB, proje
 						// If future support for MAC sets needed, handle here.
 						continue
 					}
+
 					return nil, fmt.Errorf("Unsupported address format: %q", addr)
 				}
+
 				bits := 32
 				if ip.To4() == nil {
 					bits = 128
 				}
+
 				mask := net.CIDRMask(bits, bits)
 				ipNets = append(ipNets, net.IPNet{IP: ip, Mask: mask})
 			}
@@ -102,13 +107,16 @@ func OVNEnsureAddressSets(s *state.State, l logger.Logger, client *ovn.NB, proje
 				for i, ipNet := range ipNets {
 					ipNetStrings[i] = ipNet.String()
 				}
+
 				return nil, fmt.Errorf("Failed creating address set %q with networks %s in OVN: %w", asInfo.Name, strings.Join(ipNetStrings, "-"), err)
 			}
+
 			revertion.Add(func() { _ = client.DeleteAddressSet(context.TODO(), ovn.OVNAddressSet(asInfo.Name)) })
 		} else {
 			if err != nil && !errors.Is(err, ovn.ErrNotFound) {
 				return nil, fmt.Errorf("Failed fetching address set %q (IPv4) from OVN: %w", asInfo.Name, err)
 			}
+
 			if err != nil && !errors.Is(err, ovn.ErrNotFound) {
 				return nil, fmt.Errorf("Failed fetching address set %q (IPv6) from OVN: %w", asInfo.Name, err)
 			}
@@ -116,10 +124,10 @@ func OVNEnsureAddressSets(s *state.State, l logger.Logger, client *ovn.NB, proje
 			// Compute differences.
 			existingIPv4Map := make(map[string]bool)
 			existingIPv6Map := make(map[string]bool)
-
 			for _, addr := range existingIPv4Set.Addresses {
 				existingIPv4Map[addr] = true
 			}
+
 			for _, addr := range existingIPv6Set.Addresses {
 				existingIPv6Map[addr] = true
 			}
@@ -146,12 +154,14 @@ func OVNEnsureAddressSets(s *state.State, l logger.Logger, client *ovn.NB, proje
 						break
 					}
 				}
+
 				if !found {
 					// OVN always register CIDR in address set.
 					_, network, err := net.ParseCIDR(existingIP)
 					if err != nil {
 						return nil, fmt.Errorf("Failed parsing existing IP in set %s err: %w", existingIP, err)
 					}
+
 					removeIPv4 = append(removeIPv4, *network)
 				}
 			}
@@ -164,11 +174,13 @@ func OVNEnsureAddressSets(s *state.State, l logger.Logger, client *ovn.NB, proje
 						break
 					}
 				}
+
 				if !found {
 					_, network, err := net.ParseCIDR(existingIP)
 					if err != nil {
 						return nil, fmt.Errorf("Failed parsing existing IP in set %s err: %w", existingIP, err)
 					}
+
 					removeIPv6 = append(removeIPv6, *network)
 				}
 			}
@@ -189,6 +201,7 @@ func OVNEnsureAddressSets(s *state.State, l logger.Logger, client *ovn.NB, proje
 			}
 		}
 	}
+
 	cleanup := revertion.Clone().Fail
 	revertion.Success()
 	return cleanup, nil
@@ -197,6 +210,7 @@ func OVNEnsureAddressSets(s *state.State, l logger.Logger, client *ovn.NB, proje
 // OVNAddressSetDeleteIfUnused checks if the specified address set is unused and if so, removes it from OVN.
 func OVNAddressSetDeleteIfUnused(s *state.State, l logger.Logger, client *ovn.NB, projectName string, setName string) error {
 	addrSet, err := LoadByName(s, projectName, setName)
+
 	if err != nil {
 		// If not found, it's either already deleted or doesn't exist, so nothing to do.
 		return nil
@@ -204,6 +218,7 @@ func OVNAddressSetDeleteIfUnused(s *state.State, l logger.Logger, client *ovn.NB
 
 	// Check if used by any ACLs.
 	usedBy, err := addrSet.UsedBy()
+
 	if err != nil {
 		return fmt.Errorf("Failed checking usage of address set %q in project %q: %w", setName, projectName, err)
 	}
@@ -215,6 +230,7 @@ func OVNAddressSetDeleteIfUnused(s *state.State, l logger.Logger, client *ovn.NB
 
 	// Address set is unused, remove from OVN.
 	err = client.DeleteAddressSet(context.TODO(), ovn.OVNAddressSet(setName))
+
 	if err != nil {
 		return fmt.Errorf("Failed removing address set %q from OVN: %w", setName, err)
 	}
@@ -233,9 +249,11 @@ func GetAddressSetsForACLs(s *state.State, projectName string, ACLNames []string
 
 		return err
 	})
+
 	if err != nil {
 		return nil, fmt.Errorf("Failed loading address set names for project %q: %w", projectName, err)
 	}
+
 	// For every address set in project check if used by acls given via ACLNames.
 	// If so store it in setsNames slice.
 	for _, setName := range projectSetsNames {
@@ -243,11 +261,14 @@ func GetAddressSetsForACLs(s *state.State, projectName string, ACLNames []string
 			if slices.Contains(ACLNames, aclName) {
 				setsNames = append(setsNames, setName)
 			}
+
 			return nil
 		}, setName)
+
 		if err != nil {
 			return nil, fmt.Errorf("Failed to fetch address set %s use", setName)
 		}
 	}
+
 	return setsNames, nil
 }

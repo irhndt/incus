@@ -30,8 +30,10 @@ func FirewallAddressSets(s *state.State, addrSetDeviceName string, addrSetProjec
 				Name:      set.Name,
 				Addresses: set.Addresses,
 			}
+
 			addressSets = append(addressSets, firewallAddressSet)
 		}
+
 		return nil
 	}
 
@@ -45,9 +47,11 @@ func FirewallAddressSets(s *state.State, addrSetDeviceName string, addrSetProjec
 
 		return err
 	})
+
 	if err != nil {
 		return nil, fmt.Errorf("Failed loading address set names for network %q: %w", addrSetDeviceName, err)
 	}
+
 	for _, setName := range setsNames {
 		var set *api.NetworkAddressSet
 
@@ -57,15 +61,19 @@ func FirewallAddressSets(s *state.State, addrSetDeviceName string, addrSetProjec
 
 			return err
 		})
+
 		if err != nil {
 			return nil, fmt.Errorf("Failed loading address set %q for network %q: %w", setName, addrSetDeviceName, err)
 		}
 
 		sets = append(sets, set)
 	}
+
 	err = convertAddressSets(sets)
+
 	if err != nil {
 		return nil, fmt.Errorf("Failed converting address sets for network %q: %w", addrSetDeviceName, err)
 	}
+
 	return addressSets, nil
 }

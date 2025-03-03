@@ -3495,24 +3495,31 @@ func (n *ovn) Update(newNetwork api.NetworkPut, targetNode string, clientType re
 				// Update relevant address sets and Remove from removedACL
 				if len(addedACLs) > 0 {
 					cleanup, err := addressset.OVNEnsureAddressSetsViaACLs(n.state, n.logger, n.ovnnb, n.Project(), addedACLs)
+
 					if err != nil {
 						return fmt.Errorf("Failed ensuring address sets for added ACLs are configured in OVN for network: %w", err)
 					}
+
 					revert.Add(cleanup)
 				}
+
 				if len(removedACLs) > 0 {
 					err = addressset.OVNDeleteAddressSetsViaACLs(n.state, n.logger, n.ovnnb, n.Project(), removedACLs)
+
 					if err != nil {
 						return fmt.Errorf("Failed to delete address set for removed ACLs are configured in OVN for network: %w", err)
 					}
 				}
+
 				// Check whether we need to add any of the new ACLs to the NIC.
 				for _, addedACL := range addedACLs {
+
 					if slices.Contains(nicACLs, addedACL) {
 						continue // NIC already has this ACL applied directly, so no need to add.
 					}
 
 					aclID, found := aclNameIDs[addedACL]
+
 					if !found {
 						return fmt.Errorf("Cannot find security ACL ID for %q", addedACL)
 					}
@@ -4335,12 +4342,16 @@ func (n *ovn) InstanceDevicePortStart(opts *OVNInstanceNICSetupOpts, securityACL
 			aclNets := map[string]acl.NetworkACLUsage{
 				n.Name(): {Name: n.Name(), Type: n.Type(), ID: n.ID(), Config: n.Config()},
 			}
+
 			cleanup, err := addressset.OVNEnsureAddressSetsViaACLs(n.state, n.logger, n.ovnnb, n.Project(), nicACLNames)
+
 			if err != nil {
 				return "", nil, fmt.Errorf("Failed ensuring address sets for nic ACLs are configured in OVN for network: %w", err)
 			}
+
 			revert.Add(cleanup)
 			cleanup, err = acl.OVNEnsureACLs(n.state, n.logger, n.ovnnb, n.Project(), aclNameIDs, aclNets, nicACLNames, false)
+
 			if err != nil {
 				return "", nil, fmt.Errorf("Failed ensuring security ACLs are configured in OVN for instance: %w", err)
 			}
@@ -4348,7 +4359,9 @@ func (n *ovn) InstanceDevicePortStart(opts *OVNInstanceNICSetupOpts, securityACL
 			revert.Add(cleanup)
 
 			for _, aclName := range nicACLNames {
+
 				aclID, found := aclNameIDs[aclName]
+
 				if !found {
 					return "", nil, fmt.Errorf("Cannot find security ACL ID for %q", aclName)
 				}
@@ -4369,6 +4382,7 @@ func (n *ovn) InstanceDevicePortStart(opts *OVNInstanceNICSetupOpts, securityACL
 			}
 
 			aclID, found := aclNameIDs[aclName]
+
 			if !found {
 				return "", nil, fmt.Errorf("Cannot find security ACL ID for %q", aclName)
 			}

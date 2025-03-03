@@ -179,6 +179,7 @@ func (c *ClusterTx) GetURIFromEntity(ctx context.Context, entityType int, entity
 		if err != nil {
 			return "", fmt.Errorf("Failed to get network address set name and project name: %w", err)
 		}
+
 		uri = fmt.Sprintf(cluster.EntityURIs[entityType], networkAddressSetName, projectName)
 	case cluster.TypeNode:
 		nodeInfo, err := c.GetNodeWithID(ctx, entityID)

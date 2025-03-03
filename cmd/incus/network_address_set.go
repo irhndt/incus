@@ -299,6 +299,7 @@ func (c *cmdNetworkAddressSetCreate) Run(cmd *cobra.Command, args []string) erro
 		},
 		NetworkAddressSetPut: asPut,
 	}
+
 	if c.flagDescription != "" {
 		addrSet.Description = c.flagDescription
 	}
@@ -312,6 +313,7 @@ func (c *cmdNetworkAddressSetCreate) Run(cmd *cobra.Command, args []string) erro
 		if len(entry) < 2 {
 			return fmt.Errorf(i18n.G("Bad key/value pair: %s"), args[i])
 		}
+
 		if entry[0] == "addresses" {
 			addresses := strings.Split(entry[1], ",") // Split the comma-separated IPs
 			addrSet.Addresses = append(addrSet.Addresses, addresses...)
@@ -394,6 +396,7 @@ func (c *cmdNetworkAddressSetSet) Run(cmd *cobra.Command, args []string) error {
 	if writable.ExternalIDs == nil {
 		writable.ExternalIDs = make(map[string]string)
 	}
+
 	if c.flagIsProperty {
 		// handle as properties
 		err = unpackKVToWritable(&writable, keys)
@@ -432,6 +435,7 @@ func (c *cmdNetworkAddressSetUnset) Command() *cobra.Command {
 		if len(args) == 0 {
 			return c.global.cmpNetworkAddressSets(toComplete)
 		}
+
 		if len(args) == 1 {
 			return c.global.cmpNetworkAddressSetConfigs(args[0])
 		}
@@ -793,11 +797,13 @@ func (c *cmdNetworkAddressSetRemoveAddr) Run(cmd *cobra.Command, args []string) 
 
 	for _, addr := range addrSet.Addresses {
 		match := false
+
 		for _, r := range toRemove {
 			if r == addr {
 				if removedCount > 0 && !c.flagForce {
 					return errors.New(i18n.G("Multiple addresses match. Use --force to remove them all"))
 				}
+
 				match = true
 				removedCount++
 				break

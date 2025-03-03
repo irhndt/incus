@@ -83,14 +83,15 @@ func (d *common) usedBy(firstOnly bool) ([]string, error) {
 		if d.projectName != api.ProjectDefaultName {
 			uri += fmt.Sprintf("?project=%s", d.projectName)
 		}
-		usedBy = append(usedBy, uri)
 
+		usedBy = append(usedBy, uri)
 		if firstOnly {
 			return db.ErrInstanceListStop
 		}
 
 		return nil
 	}, d.info.Name)
+
 	if err != nil {
 		if err == db.ErrInstanceListStop {
 			return usedBy, nil
@@ -130,31 +131,41 @@ func (d *common) validateName(name string) error {
 // validateAddresses ensure set is valid.
 func (d *common) validateAddresses(addresses []string) error {
 	seen := make(map[string]struct{})
+
 	for i, addr := range addresses {
-		if _, exists := seen[addr]; exists {
+		_, exists := seen[addr]
+		if exists {
 			return fmt.Errorf("Duplicate address %q found at index %d", addr, i)
 		}
+
 		seen[addr] = struct{}{}
 		// Check if it's a valid plain IP address.
 		if net.ParseIP(addr) != nil {
 			continue
 		}
+
 		// Check if it's a valid CIDR.
-		if _, _, err := net.ParseCIDR(addr); err == nil {
+		_, _, err := net.ParseCIDR(addr)
+		if err == nil {
 			continue
 		}
+
 		// Check if it's a valid MAC address.
-		if _, err := net.ParseMAC(addr); err == nil {
-			continue
+		_, err = net.ParseMAC(addr)
+		if err == nil {
+			return fmt.Errorf("Unsupported MAC address format %q at index %d", addr, i)
 		}
+
 		return fmt.Errorf("Unsupported address format %q at index %d", addr, i)
 	}
+
 	return nil
 }
 
 // validateConfig checks the entire config including name and addresses.
 func (d *common) validateConfig(config *api.NetworkAddressSetPut) error {
 	err := d.validateAddresses(config.Addresses)
+
 	if err != nil {
 		return fmt.Errorf("Invalid addresses: %w", err)
 	}
@@ -168,13 +179,13 @@ func (d *common) validateConfig(config *api.NetworkAddressSetPut) error {
 // Update method is used to update an address set and apply to concerned networks.
 func (d *common) Update(config *api.NetworkAddressSetPut, clientType request.ClientType) error {
 	err := d.validateConfig(config)
+
 	if err != nil {
 		return err
 	}
 
 	revertion := revert.New()
 	defer revertion.Fail()
-
 	if clientType == request.ClientTypeNormal {
 		oldConfig := d.info.NetworkAddressSetPut
 		err = d.state.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
@@ -182,9 +193,11 @@ func (d *common) Update(config *api.NetworkAddressSetPut, clientType request.Cli
 			err := tx.UpdateNetworkAddressSet(ctx, d.projectName, d.info.Name, config)
 			return err
 		})
+
 		if err != nil {
 			return err
 		}
+
 		// Apply changes internally and reinitialize.
 		d.info.NetworkAddressSetPut = *config
 		d.init(d.state, d.id, d.projectName, d.info)
@@ -192,7 +205,6 @@ func (d *common) Update(config *api.NetworkAddressSetPut, clientType request.Cli
 			_ = d.state.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
 				return tx.UpdateNetworkAddressSet(ctx, d.projectName, d.info.Name, &oldConfig)
 			})
-
 			d.info.NetworkAddressSetPut = oldConfig
 			d.init(d.state, d.id, d.projectName, d.info)
 		})
@@ -201,9 +213,11 @@ func (d *common) Update(config *api.NetworkAddressSetPut, clientType request.Cli
 	// Get a list of networks that indirectly reference this Address Set via ACLs.
 	asNets := map[string]AddressSetUsage{}
 	err = AddressSetNetworkUsage(d.state, d.projectName, d.info.Name, d.info.Addresses, asNets)
+
 	if err != nil {
 		return fmt.Errorf("Failed getting address set network usage: %w", err)
 	}
+
 	// Separate out OVN networks from non-OVN networks for different handling.
 	asOVNNets := map[string]AddressSetUsage{}
 	for k, v := range asNets {
@@ -224,6 +238,7 @@ func (d *common) Update(config *api.NetworkAddressSetPut, clientType request.Cli
 			}
 		}
 	}
+
 	// If there are affected OVN networks, then apply changes if request type is normal.
 	if len(asOVNNets) > 0 && clientType == request.ClientTypeNormal {
 		// Check that OVN is available.
@@ -231,6 +246,7 @@ func (d *common) Update(config *api.NetworkAddressSetPut, clientType request.Cli
 		if err != nil {
 			return err
 		}
+
 		// Ensure address sets are created or updated in OVN.
 		cleanup, err := OVNEnsureAddressSets(d.state, d.logger, ovnnb, d.projectName, []string{d.info.Name})
 		if err != nil {
@@ -251,6 +267,7 @@ func (d *common) Update(config *api.NetworkAddressSetPut, clientType request.Cli
 			// Make sure we have a suitable endpoint for updating the address set on other members.
 			return client.UseProject(d.projectName).UpdateNetworkAddressSet(d.info.Name, d.info.NetworkAddressSetPut, "")
 		})
+
 		if err != nil {
 			return err
 		}
@@ -263,6 +280,7 @@ func (d *common) Update(config *api.NetworkAddressSetPut, clientType request.Cli
 // Rename is used to rename an address set.
 func (d *common) Rename(newName string) error {
 	err := d.validateName(newName)
+
 	if err != nil {
 		return err
 	}
@@ -274,6 +292,7 @@ func (d *common) Rename(newName string) error {
 	}
 
 	usedBy, err := d.UsedBy()
+
 	if err != nil {
 		return err
 	}
@@ -285,18 +304,19 @@ func (d *common) Rename(newName string) error {
 	err = d.state.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
 		return tx.RenameNetworkAddressSet(ctx, d.projectName, d.info.Name, newName)
 	})
+
 	if err != nil {
 		return err
 	}
 
 	d.info.Name = newName
-
 	return nil
 }
 
 // Delete is used to delete an address set.
 func (d *common) Delete() error {
 	usedBy, err := d.UsedBy()
+
 	if err != nil {
 		return err
 	}
@@ -308,9 +328,11 @@ func (d *common) Delete() error {
 	err = d.state.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
 		return tx.DeleteNetworkAddressSet(ctx, d.projectName, d.info.Name)
 	})
+
 	if err != nil {
 		return fmt.Errorf("Error while deleting address set from db")
 	}
+
 	// Get a list of networks that indirectly reference this Address Set via ACLs.
 	asNets := map[string]AddressSetUsage{}
 	err = AddressSetNetworkUsage(d.state, d.projectName, d.info.Name, d.info.Addresses, asNets)
@@ -329,23 +351,28 @@ func (d *common) Delete() error {
 			return fmt.Errorf("Unsupported network type %q using address set %q", v.Type, d.info.Name)
 		}
 	}
+
 	if len(asNets) > 0 {
 		for _, asNet := range asNets {
 			err = FirewallApplyAddressSetRules(d.state, d.projectName, asNet)
+
 			if err != nil {
 				return err
 			}
 		}
 	}
+
 	if len(asOVNNets) > 0 {
 		ovnnb, _, err := d.state.OVN()
 		if err != nil {
 			return err
 		}
+
 		err = OVNAddressSetDeleteIfUnused(d.state, d.logger, ovnnb, d.projectName, d.info.Name)
 		if err != nil {
 			return fmt.Errorf("Failed removing unused OVN address sets: %w", err)
 		}
 	}
+
 	return nil
 }

@@ -17,7 +17,9 @@ func ValidName(name string) error {
 	if util.StringHasPrefix(name, "@", "$") {
 		return fmt.Errorf("Name cannot start with reserved character %q", name[0])
 	}
+
 	err := validate.IsHostname(name)
+
 	if err != nil {
 		return err
 	}

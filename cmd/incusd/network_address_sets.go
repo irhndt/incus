@@ -193,6 +193,7 @@ func networkAddressSetsGet(d *Daemon, r *http.Request) response.Response {
 			if err != nil {
 				return err
 			}
+
 			addrSetNames = map[string][]string{}
 			addrSetNames[projectName] = addrSets
 		}
@@ -226,15 +227,19 @@ func networkAddressSetsGet(d *Daemon, r *http.Request) response.Response {
 				netAddressSetInfo.UsedBy, _ = netAddressSet.UsedBy() // Ignore errors in UsedBy, will return nil.
 				if clauses != nil && len(clauses.Clauses) > 0 {
 					match, err := filter.Match(*netAddressSetInfo, *clauses)
+
 					if err != nil {
 						return response.SmartError(err)
 					}
+
 					if !match {
 						continue
 					}
 				}
+
 				fullResults = append(fullResults, *netAddressSetInfo)
 			}
+
 			linkResults = append(linkResults, fmt.Sprintf("/%s/network-address-sets/%s", version.APIVersion, addrSetName))
 		}
 	}

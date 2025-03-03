@@ -1442,14 +1442,18 @@ func (n *bridge) setup(oldConfig map[string]string) error {
 
 	// Setup firewall.
 	n.logger.Debug("Setting up firewall")
+
 	if n.state.Firewall.String() == "nftables" {
 		n.logger.Debug("Address set feature enabled for nftables backend")
 		fwOpts.AddressSet = true
 	}
+
 	err = n.state.Firewall.NetworkSetup(n.name, fwOpts)
+
 	if err != nil {
 		return fmt.Errorf("Failed to setup firewall: %w", err)
 	}
+
 	// Setup named sets for nft firewall
 	// We apply all available address sets to avoid missing some
 	if fwOpts.AddressSet {

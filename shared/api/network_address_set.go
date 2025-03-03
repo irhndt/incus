@@ -70,13 +70,14 @@ func (as *NetworkAddressSet) Normalise() {
 	for _, addr := range as.Addresses {
 		trimmedAddresses = append(trimmedAddresses, strings.TrimSpace(addr))
 	}
-	as.Addresses = trimmedAddresses
 
+	as.Addresses = trimmedAddresses
 	if as.ExternalIDs != nil {
 		normalized := make(map[string]string, len(as.ExternalIDs))
 		for k, v := range as.ExternalIDs {
 			normalized[strings.TrimSpace(k)] = strings.TrimSpace(v)
 		}
+
 		as.ExternalIDs = normalized
 	}
 }

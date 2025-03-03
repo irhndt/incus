@@ -541,6 +541,7 @@ func (d *common) validateRuleSubjects(fieldName string, direction ruleDirection,
 
 			return 0, fmt.Errorf("Named subjects not allowed in %q for %q rules", fieldName, direction)
 		}
+
 		if strings.HasPrefix(subject, "$") {
 			var addrSetName = strings.Trim(subject, "$")
 			// Check that address set exist in DB
@@ -549,11 +550,14 @@ func (d *common) validateRuleSubjects(fieldName string, direction ruleDirection,
 				_, _, err = tx.GetNetworkAddressSet(ctx, d.Project(), addrSetName)
 				return err
 			})
+
 			if err != nil {
 				return 0, fmt.Errorf("Failed getting network address set %s for subject validation: %w", addrSetName, err)
 			}
+
 			return 0, nil // An address set exist for this subject names
 		}
+
 		return 0, fmt.Errorf("Invalid subject %q", subject)
 	}
 

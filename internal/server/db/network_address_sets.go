@@ -31,12 +31,14 @@ func (c *ClusterTx) GetNetworkAddressSets(ctx context.Context, project string) (
 		if err != nil {
 			return err
 		}
+
 		setNames = append(setNames, setName)
 		return nil
 	}, project)
 	if err != nil {
 		return nil, err
 	}
+
 	return setNames, nil
 }
 
@@ -52,9 +54,11 @@ func (c *ClusterTx) GetNetworkAddressSetsAllProjects(ctx context.Context) (map[s
 	err := query.Scan(ctx, c.tx, q, func(scan func(dest ...any) error) error {
 		var projectName, setName string
 		err := scan(&projectName, &setName)
+
 		if err != nil {
 			return err
 		}
+
 		setNames[projectName] = append(setNames[projectName], setName)
 		return nil
 	})
@@ -79,13 +83,17 @@ func (c *ClusterTx) GetNetworkAddressSetIDByNames(ctx context.Context, project s
 	err := query.Scan(ctx, c.tx, q, func(scan func(dest ...any) error) error {
 		var addrSetID int64
 		var addrSetName string
+
 		err := scan(&addrSetID, &addrSetName)
+
 		if err != nil {
 			return err
 		}
+
 		addrSets[addrSetName] = addrSetID
 		return nil
 	}, project)
+
 	if err != nil {
 		return nil, err
 	}
@@ -101,15 +109,16 @@ func (c *ClusterTx) GetNetworkAddressSet(ctx context.Context, projectName string
 	WHERE project_id = (SELECT id FROM projects WHERE name = ? LIMIT 1) AND name = ?
 	LIMIT 1
 	`
-
 	var id int64
 	var addressesJSON string
 	var description string
+
 	err := c.tx.QueryRowContext(ctx, q, projectName, name).Scan(&id, &addressesJSON, &description)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return -1, nil, api.StatusErrorf(http.StatusNotFound, "Network address set not found")
 		}
+
 		return -1, nil, err
 	}
 
@@ -204,19 +213,23 @@ func (c *ClusterTx) UpdateNetworkAddressSet(ctx context.Context, projectName str
 	WHERE project_id = ? AND name = ?
 	`
 	res, err := c.tx.ExecContext(ctx, stmt, string(addressesJSON), put.Description, projectID, name)
+
 	if err != nil {
 		return err
 	}
+
 	rows, err := res.RowsAffected()
 	if err != nil {
 		return err
 	}
+
 	if rows == 0 {
 		return api.StatusErrorf(http.StatusNotFound, "Address set not found")
 	}
 
 	var id int64
 	err = c.tx.QueryRowContext(ctx, "SELECT id FROM address_sets WHERE project_id = ? AND name = ? LIMIT 1", projectID, name).Scan(&id)
+
 	if err != nil {
 		return err
 	}
@@ -248,9 +261,11 @@ func (c *ClusterTx) RenameNetworkAddressSet(ctx context.Context, projectName str
 	}
 
 	rows, err := res.RowsAffected()
+
 	if err != nil {
 		return err
 	}
+
 	if rows == 0 {
 		return api.StatusErrorf(http.StatusNotFound, "Address set not found")
 	}
@@ -271,14 +286,17 @@ func (c *ClusterTx) DeleteNetworkAddressSet(ctx context.Context, projectName str
 	`
 
 	res, err := c.tx.ExecContext(ctx, stmt, projectID, name)
+
 	if err != nil {
 		return err
 	}
 
 	rows, err := res.RowsAffected()
+
 	if err != nil {
 		return err
 	}
+
 	if rows == 0 {
 		return api.StatusErrorf(http.StatusNotFound, "Address set not found")
 	}
@@ -293,17 +311,19 @@ func (c *ClusterTx) getNetworkAddressSetExternalIDs(ctx context.Context, address
 	FROM address_sets_external_ids
 	WHERE address_set_id=?
 	`
-
 	extIDs := make(map[string]string)
 	err := query.Scan(ctx, c.tx, q, func(scan func(dest ...any) error) error {
 		var k, v string
 		err := scan(&k, &v)
+
 		if err != nil {
 			return err
 		}
+
 		extIDs[k] = v
 		return nil
 	}, addressSetID)
+
 	if err != nil {
 		return nil, err
 	}
@@ -322,6 +342,7 @@ func (c *ClusterTx) updateNetworkAddressSetExternalIDs(ctx context.Context, addr
 		stmt := "INSERT INTO address_sets_external_ids (address_set_id, key, value) VALUES (?, ?, ?)"
 		for k, v := range externalIDs {
 			_, err = c.tx.ExecContext(ctx, stmt, addressSetID, k, v)
+
 			if err != nil {
 				return fmt.Errorf("Failed inserting external_id %s=%s: %w", k, v, err)
 			}
@@ -339,8 +360,10 @@ func (c *ClusterTx) getProjectID(ctx context.Context, projectName string) (int64
 		if err == sql.ErrNoRows {
 			return -1, api.StatusErrorf(http.StatusNotFound, "Project not found")
 		}
+
 		return -1, err
 	}
+
 	return projectID, nil
 }
 

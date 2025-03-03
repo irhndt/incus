@@ -154,6 +154,7 @@ func AddressSetUsedBy(s *state.State, projectName string, usageFunc func(aclName
 				if err == db.ErrInstanceListStop {
 					return err
 				}
+
 				return fmt.Errorf("Usage callback failed: %w", err)
 			}
 		}

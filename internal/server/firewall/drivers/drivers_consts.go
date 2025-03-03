@@ -97,7 +97,8 @@ type ElemField struct {
 // UnmarshalJSON handles both plain strings and CIDR dictionaries inside `elem`.
 func (e *ElemField) UnmarshalJSON(data []byte) error {
 	var rawElems []any
-	if err := json.Unmarshal(data, &rawElems); err != nil {
+	err := json.Unmarshal(data, &rawElems)
+	if err != nil {
 		return err
 	}
 
@@ -108,16 +109,19 @@ func (e *ElemField) UnmarshalJSON(data []byte) error {
 			e.Addresses = append(e.Addresses, v)
 		case map[string]any:
 			// CIDR notation (prefix dictionary).
-			if prefix, ok := v["prefix"].(map[string]any); ok {
+			prefix, ok := v["prefix"].(map[string]any)
+			if ok {
 				addr, addrOk := prefix["addr"].(string)
 				lenFloat, lenOk := prefix["len"].(float64) // JSON numbers are float64 by default.
 				if addrOk && lenOk {
 					e.Addresses = append(e.Addresses, fmt.Sprintf("%s/%d", addr, int(lenFloat)))
 				}
 			}
+
 		default:
 			return fmt.Errorf("unsupported element type in NFTables set: %v", elem)
 		}
 	}
+
 	return nil
 }
