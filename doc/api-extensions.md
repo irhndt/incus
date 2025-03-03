@@ -2713,3 +2713,7 @@ This extends the API filtering mechanism to all API collections.
 
 ## `acme_dns01`
 Adds support for `DNS-01` challenge to the Incus ACME support for certificate generation.
+
+## `network_address_set`
+
+This adds the concept of network address sets to API under the API endpoint prefix `/1.0/network-address-sets`.
