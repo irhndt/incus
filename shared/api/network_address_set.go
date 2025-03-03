@@ -1,6 +1,8 @@
 package api
 
-import "strings"
+import (
+	"strings"
+)
 
 // NetworkAddressSetPost used for renaming an Address Set.
 //

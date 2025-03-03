@@ -2,11 +2,9 @@
 test_address_set() {
   ensure_import_testimage
   ensure_has_localhost_remote "${INCUS_ADDR}"
-  
-  ! incus network address-set create 2432 || false 
+  ! incus network address-set create 2432 || false
   incus network address-set create testAS
   incus network address-set delete testAS
-
   # Test 2: Address set creation & deletion
   ! incus network address-set create 2432 || false
   incus network address-set create testAS
@@ -16,7 +14,6 @@ test_address_set() {
   incus network address-set ls --project testproj | grep -q "testAS"
   incus network address-set delete testAS --project testproj
   incus project delete testproj
-
   cat <<EOF | incus network address-set create testAS
 description: Test Address set from STDIN
 addresses:

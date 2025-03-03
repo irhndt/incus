@@ -2965,7 +2965,7 @@ definitions:
         type: object
         x-go-package: github.com/lxc/incus/v6/shared/api
     NetworkAddressSet:
-        description: Refer to doc/network-acls.md for details.
+        description: Refer to doc/howto/network_address_sets.md for details.
         properties:
             addresses:
                 description: Updated addresses
@@ -11486,34 +11486,6 @@ paths:
                   type: string
             produces:
                 - application/json
-            responses:
-                "200":
-                    description: API endpoints
-                    schema:
-                        description: Sync response
-                        properties:
-                            metadata:
-                                description: List of network address sets
-                                items:
-                                    $ref: '#/definitions/NetworkAddressSet'
-                                type: array
-                            status:
-                                description: Status description
-                                example: Success
-                                type: string
-                            status_code:
-                                description: Status code
-                                example: 200
-                                type: integer
-                            type:
-                                description: Response type
-                                example: sync
-                                type: string
-                        type: object
-                "403":
-                    $ref: '#/responses/Forbidden'
-                "500":
-                    $ref: '#/responses/InternalServerError'
             summary: Get the network address sets
             tags:
                 - network-address-sets
