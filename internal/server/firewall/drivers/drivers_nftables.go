@@ -1577,7 +1577,7 @@ func (d Nftables) NamedAddressSetExists(setName string, family string) (bool, er
 	}
 
 	var setsOutput NftListSetsOutput
-	err := json.Unmarshal([]byte(output), &setsOutput)
+	err = json.Unmarshal([]byte(output), &setsOutput)
 	if err != nil {
 		return false, fmt.Errorf("failed to parse nft command output: %w", err)
 	}
