@@ -1128,15 +1128,22 @@ func (d Nftables) aclRuleCriteriaToRules(networkName string, ipVersion uint, rul
 		}
 	}
 
+	// If source and destination are empty we want to build base rules at least
+	if rule.Source == "" && rule.Destination == "" {
+		ruleFragments = append(ruleFragments, append([]string{}, baseArgs...))
+	}
+
 	// Build the remaining parts (protocol, ports, logging, action).
 	suffixParts, err := d.buildRemainingRuleParts(rule, ipVersion)
 	if err != nil {
 		return nil, overallPartial, err
 	}
 
-	if len(ruleFragments) == 0 {
-		return []string{strings.Join(append(baseArgs, rule.Action), " ")}, overallPartial, nil
-	}
+	// If we have empty fragments we have either no ipVersion criterias
+	// Or we have an empty acl with no rules
+	//if len(ruleFragments) == 0 && rule.Action == "reject" {
+	//	return []string{strings.Join(append(baseArgs, rule.Action), " ")}, overallPartial, nil
+	//}
 
 	// Append the common suffix parts to every fragment.
 	for _, frag := range ruleFragments {
@@ -1513,19 +1520,6 @@ func (d Nftables) NetworkApplyAddressSets(networkName string, sets []AddressSet)
 			}
 
 			return fmt.Errorf("unsupported address format: %q", addr)
-		}
-
-		// If no addresses, still create empty sets to avoid errors.
-		if len(addresses) == 0 {
-			for _, ipV := range []string{"4", "6"} {
-				config := &strings.Builder{}
-				fmt.Fprintf(config, "add set inet %s ", nftablesNamespace)
-				fmt.Fprintf(config, " %s_ipv%s {\n    type ipv4_addr;\n  flags interval;\n}\n", name, ipV)
-				err := subprocess.RunCommandWithFds(context.TODO(), strings.NewReader(config.String()), nil, "nft", "-f", "-")
-				if err != nil {
-					return fmt.Errorf("failed to create empty nft sets for address set %q: %w", name, err)
-				}
-			}
 		}
 
 		// Build NFT config.
