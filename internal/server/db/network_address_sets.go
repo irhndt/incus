@@ -153,7 +153,7 @@ func (c *ClusterTx) GetNetworkAddressSet(ctx context.Context, projectName string
 func (c *ClusterTx) GetNetworkAddressSetNameAndProjectWithID(ctx context.Context, networkAddressSetID int) (string, string, error) {
 	var networkAddressSetName string
 	var projectName string
-	q := `SELECT networks_address_sets.name, projects.name FROM networks_address_sets JOIN projects ON projects.id=networks.project_id WHERE networks_address_sets.id=?`
+	q := `SELECT address_sets.name, projects.name FROM address_sets JOIN projects ON projects.id = address_sets.project_id WHERE address_sets.id = ?`
 	err := c.tx.QueryRowContext(ctx, q, networkAddressSetID).Scan(&networkAddressSetName, &projectName)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -369,8 +369,7 @@ func (c *ClusterTx) getProjectID(ctx context.Context, projectName string) (int64
 
 // GetNetworkAddressSetURIs returns the URIs for the network address sets with the given project.
 func (c *ClusterTx) GetNetworkAddressSetURIs(ctx context.Context, projectID int, project string) ([]string, error) {
-	stmt := `SELECT networks_address_sets.name from networks_address_sets WHERE networks_address_sets.project_id = ?`
-
+	stmt := `SELECT name FROM address_sets WHERE project_id = ?`
 	names, err := query.SelectStrings(ctx, c.tx, stmt, projectID)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to get URIs for network address sets: %w", err)
