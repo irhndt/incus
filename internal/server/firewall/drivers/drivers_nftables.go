@@ -986,11 +986,6 @@ func (d Nftables) NetworkApplyACLRules(networkName string, rules []ACLRule) erro
 // buildRemainingRuleParts is a helper that returns the protocol, port, logging, and action parts of a rule.
 func (d Nftables) buildRemainingRuleParts(rule *ACLRule, ipVersion uint) (string, error) {
 	args := []string{}
-	var useAddressSets bool
-
-	if strings.Contains(rule.Source, "$") || strings.Contains(rule.Destination, "$") {
-		useAddressSets = true
-	}
 
 	// Add protocol filters.
 	if slices.Contains([]string{"tcp", "udp"}, rule.Protocol) {
@@ -1004,32 +999,15 @@ func (d Nftables) buildRemainingRuleParts(rule *ACLRule, ipVersion uint) (string
 			args = append(args, d.aclRulePortToACLMatch("dport", util.SplitNTrimSpace(rule.DestinationPort, ",", -1, false)...)...)
 		}
 	} else if slices.Contains([]string{"icmp4", "icmp6"}, rule.Protocol) {
-		var icmpIPVersion uint
 		var protoName string
 
 		switch rule.Protocol {
 		case "icmp4":
 			protoName = "icmp"
-			icmpIPVersion = 4
 			args = append(args, "ip", "protocol", protoName)
 		case "icmp6":
 			protoName = "icmpv6"
-			icmpIPVersion = 6
 			args = append(args, "ip6", "nexthdr", protoName)
-		}
-
-		if ipVersion != icmpIPVersion && !useAddressSets {
-			// If we got this far it means that source/destination are either empty or are filled
-			// with at least some subjects in the same family as ipVersion. So if the icmpIPVersion
-			// doesn't match the ipVersion then it means the rule contains mixed-version subjects
-			// which is invalid when using an IP version specific ICMP protocol.
-			if rule.Source != "" || rule.Destination != "" {
-				return "", fmt.Errorf("Invalid use of %q protocol with non-IPv%d source/destination criteria\nDEBUG: %s  - %s", rule.Protocol, ipVersion, rule.Source, rule.Destination)
-			}
-
-			// Otherwise it means this is just a blanket ICMP rule and is only appropriate for use
-			// with the corresponding ipVersion nft command.
-			return "", nil // Rule is not appropriate for ipVersion.
 		}
 
 		if rule.ICMPType != "" {
@@ -1067,6 +1045,7 @@ func (d Nftables) buildRemainingRuleParts(rule *ACLRule, ipVersion uint) (string
 func (d Nftables) aclRuleCriteriaToRules(networkName string, ipVersion uint, rule *ACLRule) ([]string, bool, error) {
 	// Build a base argument list with the interface name.
 	baseArgs := []string{}
+	var useAddressSets bool
 	if rule.Direction == "ingress" {
 		// For ingress, the rule applies to packets coming from the host into the network's interface.
 		baseArgs = append(baseArgs, "oifname", networkName)
@@ -1151,7 +1130,6 @@ func (d Nftables) aclRuleCriteriaToRules(networkName string, ipVersion uint, rul
 
 	// Build the remaining parts (protocol, ports, logging, action).
 	suffixParts, err := d.buildRemainingRuleParts(rule, ipVersion)
-
 	if err != nil {
 		return nil, overallPartial, err
 	}
@@ -1171,7 +1149,25 @@ func (d Nftables) aclRuleCriteriaToRules(networkName string, ipVersion uint, rul
 				icmpIPVersion = 6
 			}
 
+			if strings.Contains(rule.Source, "$") || strings.Contains(rule.Destination, "$") {
+				useAddressSets = true
+			}
+
 			if ipVersion != icmpIPVersion {
+				if !useAddressSets {
+					// If we got this far it means that source/destination are either empty or are filled
+					// with at least some subjects in the same family as ipVersion. So if the icmpIPVersion
+					// doesn't match the ipVersion then it means the rule contains mixed-version subjects
+					// which is invalid when using an IP version specific ICMP protocol.
+					if rule.Source != "" || rule.Destination != "" {
+						return nil, overallPartial, fmt.Errorf("Invalid use of %q protocol with non-IPv%d source/destination criteria", rule.Protocol, ipVersion)
+					}
+
+					// Otherwise it means this is just a blanket ICMP rule and is only appropriate for use
+					// with the corresponding ipVersion nft command.
+					return nil, overallPartial, nil // Rule is not appropriate for ipVersion.
+				}
+
 				if strings.Contains(ruleString, fmt.Sprintf("_ipv%d", ipVersion)) {
 					continue
 				}
