@@ -69,7 +69,7 @@ EOF
         ipv4.address=192.0.2.1/24 \
         ipv6.address=2001:db8::1/64
 
-  incus launch images:debian/12 testct
+  incus launch testimage testct
   ip=$(incus list testct --format csv | cut -d',' -f3 | head -n1 | cut -d' ' -f1)
   incus network address-set create testAS
   incus network address-set add-addr testAS "$ip"
@@ -84,7 +84,7 @@ EOF
   incus network address-set delete testAS
   incus network address-set create testAS
   incus network address-set add-addr testAS "$ip"
-  incus launch images:debian/12 testct2
+  incus launch testimage testct2
   ip2=$(incus list testct2 --format csv | cut -d',' -f3 | head -n1 | cut -d' ' -f1)
   incus network acl create mixedACL
   incus network acl rule add mixedACL ingress action=allow protocol=icmp4 destination="$ip2,\$testAS"
@@ -108,19 +108,19 @@ EOF
   incus network acl delete cidrACL
   incus network address-set rm testAS
   ip6=$(incus list testct --format csv | cut -d',' -f4 | tr ' ' '\n' | head -n1)
-  socat - TCP:"$ip":5355 # SHOULD WORK BY DEFAULT
-  socat - TCP6:"$ip6":5355 5355 # SHOULD WORK BY DEFAULT
   incus network address-set create testAS
   incus network address-set add-addr testAS "$ip"
-  incus network acl create allowtcp5355
-  incus network acl rule add allowtcp5355 ingress action=allow protocol=tcp destination_port="5355" destination="\$testAS"
-  incus network set "${brName}" security.acls="allowtcp5355"
-  socat - TCP:"$ip":5355
+  incus network acl create allowtcp8080
+  incus network acl rule add allowtcp8080 egress action=allow protocol=tcp destination_port="8080" destination="\$testAS"
+  incus network set "${brName}" security.acls="allowtcp8080"
+  nc -l -p 8080 -q0 -s 192.0.2.1 8080 </dev/null >/dev/null &
+  nc -l -p 8080 -q0 -s 2001:db8::1 8080 </dev/null >/dev/null &  
+  incus exec "${ctPrefix}A" --disable-stdin -- nc -w2 "$ip" 8080
   incus network address-set add-addr testAS "$ip6"
-  socat - TCP6:"$ip6":5355 5355
+  incus exec "${ctPrefix}A" --disable-stdin -- nc -w2 2001:db8::1 8080
   incus network address-set del-addr testAS "$ip6"
-  ! socat - TCP6:"$ip6":5355 || false
+  ! incus exec "${ctPrefix}A" --disable-stdin -- nc -w2 2001:db8::1 8080 || false
   incus network set "${brName}" security.acls=""
-  incus network acl delete allowtcp5355
+  incus network acl delete allowtcp8080
   incus network address-set rm testAS
 }
