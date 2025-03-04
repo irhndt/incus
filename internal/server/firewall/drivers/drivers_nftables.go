@@ -1611,7 +1611,7 @@ func (d Nftables) NamedAddressSetExists(setName string, family string) (bool, er
 	return false, nil
 }
 
-// RemoveIncusAddressSets remove every address set in incus namespace
+// RemoveIncusAddressSets remove every address set in incus namespace.
 func (d Nftables) RemoveIncusAddressSets() error {
 	// Execute the nft command with JSON output using subprocess.
 	output, err := subprocess.RunCommand("nft", "-j", "list", "sets", "inet")
