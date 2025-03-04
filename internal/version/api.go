@@ -465,7 +465,8 @@ var APIExtensions = []string{
 	"instance_smbios11",
 	"api_filtering_extended",
 	"acme_dns01",
-	"network_address_set",
+	"security_iommu",
+ 	"network_address_set",
 }
 
 // APIExtensionsCount returns the number of available API extensions.

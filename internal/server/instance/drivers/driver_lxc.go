@@ -2306,6 +2306,34 @@ func (d *lxc) startCommon() (string, []func() error, error) {
 			volatileSet["volatile.container.oci"] = "true"
 		}
 
+		// Allow unprivileged users to use ping.
+		maxGid := int64(4294967295)
+
+		if !d.IsPrivileged() {
+			maxGid = 0
+			idMap, err := d.CurrentIdmap()
+			if err != nil {
+				return "", nil, err
+			}
+
+			for _, entry := range idMap.Entries {
+				if entry.NSID+entry.MapRange-1 > maxGid {
+					maxGid = entry.NSID + entry.MapRange - 1
+				}
+			}
+		}
+
+		err = lxcSetConfigItem(cc, "lxc.sysctl.net.ipv4.ping_group_range", fmt.Sprintf("0 %d", maxGid))
+		if err != nil {
+			return "", nil, err
+		}
+
+		// Allow unprivileged users to use low ports.
+		err = lxcSetConfigItem(cc, "lxc.sysctl.net.ipv4.ip_unprivileged_port_start", "0")
+		if err != nil {
+			return "", nil, err
+		}
+
 		// Configure the entry point.
 		if len(config.Process.Args) > 0 && slices.Contains([]string{"/init", "/sbin/init", "/s6-init"}, config.Process.Args[0]) {
 			// For regular init systems, call them directly as PID1.
@@ -6353,9 +6381,9 @@ func (d *lxc) MigrateReceive(args instance.MigrateReceiveArgs) error {
 		// A zero length Snapshots slice indicates volume only migration in
 		// VolumeTargetArgs. So if VolumeOnly was requested, do not populate them.
 		if args.Snapshots {
-			volTargetArgs.Snapshots = make([]string, 0, len(snapshots))
+			volTargetArgs.Snapshots = make([]*migration.Snapshot, 0, len(snapshots))
 			for _, snap := range snapshots {
-				volTargetArgs.Snapshots = append(volTargetArgs.Snapshots, *snap.Name)
+				volTargetArgs.Snapshots = append(volTargetArgs.Snapshots, &migration.Snapshot{Name: snap.Name})
 
 				// Only create snapshot instance DB records if not doing a cluster same-name move.
 				// As otherwise the DB records will already exist.

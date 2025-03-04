@@ -3331,7 +3331,8 @@ func (d *qemu) deviceBootPriorities(base int) (map[string]int, error) {
 func (d *qemu) generateQemuConfig(cpuInfo *cpuTopology, mountInfo *storagePools.MountInfo, busName string, vsockFD int, devConfs []*deviceConfig.RunConfig, fdFiles *[]*os.File) ([]monitorHook, error) {
 	var monHooks []monitorHook
 
-	conf := qemuBase(&qemuBaseOpts{d.Architecture()})
+	isWindows := strings.Contains(strings.ToLower(d.expandedConfig["image.os"]), "windows")
+	conf := qemuBase(&qemuBaseOpts{d.Architecture(), util.IsTrue(d.expandedConfig["security.iommu"])})
 
 	err := d.addCPUMemoryConfig(&conf, cpuInfo)
 	if err != nil {
@@ -3400,8 +3401,8 @@ func (d *qemu) generateQemuConfig(cpuInfo *cpuTopology, mountInfo *storagePools.
 	// Setup the bus allocator.
 	bus := qemuNewBus(busName, &conf)
 
-	// Windows doesn't support virtio-iommu.
-	if !strings.Contains(strings.ToLower(d.expandedConfig["image.os"]), "windows") && d.architectureSupportsUEFI(d.architecture) {
+	// Add IOMMU.
+	if util.IsTrue(d.expandedConfig["security.iommu"]) && d.architectureSupportsUEFI(d.architecture) {
 		devBus, devAddr, multi := bus.allocateDirect()
 		iommuOpts := qemuDevOpts{
 			busName:       bus.name,
@@ -3410,7 +3411,7 @@ func (d *qemu) generateQemuConfig(cpuInfo *cpuTopology, mountInfo *storagePools.
 			multifunction: multi,
 		}
 
-		conf = append(conf, qemuIOMMU(&iommuOpts)...)
+		conf = append(conf, qemuIOMMU(&iommuOpts, isWindows)...)
 	}
 
 	// Now add the fixed set of devices. The multi-function groups used for these fixed internal devices are
@@ -3461,7 +3462,7 @@ func (d *qemu) generateQemuConfig(cpuInfo *cpuTopology, mountInfo *storagePools.
 	conf = append(conf, qemuTablet(&tabletOpts)...)
 
 	// Windows doesn't support virtio-vsock.
-	if !strings.Contains(strings.ToLower(d.expandedConfig["image.os"]), "windows") {
+	if !isWindows {
 		// Existing vsock ID from volatile.
 		vsockID, err := d.getVsockID()
 		if err != nil {
@@ -3530,7 +3531,7 @@ func (d *qemu) generateQemuConfig(cpuInfo *cpuTopology, mountInfo *storagePools.
 	conf = append(conf, qemuSCSI(&scsiOpts)...)
 
 	// Windows doesn't support virtio-9p.
-	if !strings.Contains(strings.ToLower(d.expandedConfig["image.os"]), "windows") {
+	if !isWindows {
 		// Always export the config directory as a 9p config drive, in case the host or VM guest doesn't support
 		// virtio-fs.
 		devBus, devAddr, multi = bus.allocate(busFunctionGroup9p)
@@ -6658,6 +6659,7 @@ func (d *qemu) MigrateSend(args instance.MigrateSendArgs) error {
 		return err
 	}
 
+	contentType := storagePools.InstanceContentType(d)
 	// If we are copying snapshots, retrieve a list of snapshots from source volume.
 	if args.Snapshots {
 		offerHeader.SnapshotNames = make([]string, 0, len(srcConfig.Snapshots))
@@ -6665,6 +6667,12 @@ func (d *qemu) MigrateSend(args instance.MigrateSendArgs) error {
 
 		for i := range srcConfig.Snapshots {
 			offerHeader.SnapshotNames = append(offerHeader.SnapshotNames, srcConfig.Snapshots[i].Name)
+			snapSize, err := storagePools.CalculateVolumeSnapshotSize(d.Project().Name, pool, contentType, storageDrivers.VolumeTypeVM, d.Name(), srcConfig.Snapshots[i].Name)
+			if err != nil {
+				return err
+			}
+
+			srcConfig.Snapshots[i].Config["size"] = fmt.Sprintf("%d", snapSize)
 			offerHeader.Snapshots = append(offerHeader.Snapshots, instance.SnapshotToProtobuf(srcConfig.Snapshots[i]))
 		}
 	}
@@ -7480,9 +7488,12 @@ func (d *qemu) MigrateReceive(args instance.MigrateReceiveArgs) error {
 		// A zero length Snapshots slice indicates volume only migration in
 		// VolumeTargetArgs. So if VolumeOnly was requested, do not populate them.
 		if args.Snapshots {
-			volTargetArgs.Snapshots = make([]string, 0, len(snapshots))
+			volTargetArgs.Snapshots = make([]*migration.Snapshot, 0, len(snapshots))
 			for _, snap := range snapshots {
-				volTargetArgs.Snapshots = append(volTargetArgs.Snapshots, *snap.Name)
+				migrationSnapshot := &migration.Snapshot{Name: snap.Name}
+				migration.SetSnapshotConfigValue(migrationSnapshot, "size", migration.GetSnapshotConfigValue(snap, "size"))
+
+				volTargetArgs.Snapshots = append(volTargetArgs.Snapshots, migrationSnapshot)
 
 				// Only create snapshot instance DB records if not doing a cluster same-name move.
 				// As otherwise the DB records will already exist.
@@ -7491,6 +7502,12 @@ func (d *qemu) MigrateReceive(args instance.MigrateReceiveArgs) error {
 					if err != nil {
 						return err
 					}
+
+					// The offerHeader, depending on the case, stores information about either an InstanceSnapshot
+					// or a StorageVolumeSnapshot. In the Config, we pass information about the volume size,
+					// but an InstanceSnapshot config cannot have a 'size' key. This key should be removed
+					// before passing the data to the CreateInternal method.
+					delete(snapArgs.Config, "size")
 
 					// Ensure that snapshot and parent instance have the same storage pool in
 					// their local root disk device. If the root disk device for the snapshot
