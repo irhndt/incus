@@ -70,22 +70,22 @@ EOF
         ipv6.address=2001:db8::1/64
 
   incus launch images:debian/12 testct
-  local ip=$(incus list testct --format csv | cut -d',' -f3 | head -n1 | cut -d' ' -f1)
+  ip=$(incus list testct --format csv | cut -d',' -f3 | head -n1 | cut -d' ' -f1)
   incus network address-set create testAS
-  incus network address-set add-addr testAS $ip
+  incus network address-set add-addr testAS "$ip"
   incus network acl create allowping
   incus network acl rule add blockping ingress action=allow protocol=icmp4 destination="\$testAS"
   incus network set "${brName}" security.acls="allowping"
   sleep 1
   ping -c2 "$ip" > /dev/null
-  incus network address-set del-addr testAS $ip
+  incus network address-set del-addr testAS "$ip"
   incus network set "${brName}" security.acls=""
   incus network acl delete allowping
   incus network address-set delete testAS
   incus network address-set create testAS
   incus network address-set add-addr testAS "$ip"
   incus launch images:debian/12 testct2
-  local ip2=$(incus list testct2 --format csv | cut -d',' -f3 | head -n1 | cut -d' ' -f1)
+  ip2=$(incus list testct2 --format csv | cut -d',' -f3 | head -n1 | cut -d' ' -f1)
   incus network acl create mixedACL
   incus network acl rule add mixedACL ingress action=allow protocol=icmp4 destination="$ip2,\$testAS"
   incus network set "${brName}" security.acls="mixedACL"
@@ -96,7 +96,7 @@ EOF
   incus network acl delete mixedACL
   incus network address-set rm testAS
   incus delete testct2 --force
-  local subnet=$(echo "$ip" | awk -F. '{print $1"."$2"."$3".0/24"}')
+  subnet=$(echo "$ip" | awk -F. '{print $1"."$2"."$3".0/24"}')
   incus network address-set create testAS
   incus network address-set add-addr testAS "$subnet"
   incus network acl create cidrACL
@@ -107,19 +107,19 @@ EOF
   incus network set "${brName}" security.acls=""
   incus network acl delete cidrACL
   incus network address-set rm testAS
-  local ip6=$(incus list testct --format csv | cut -d',' -f4 | tr ' ' '\n' | head -n1)
-  nc -z -w 5 "$ip" 5355 # SHOULD WORK BY DEFAULT
-  nc -6 -z -w 5 "$ip6" 5355 # SHOULD WORK BY DEFAULT
+  ip6=$(incus list testct --format csv | cut -d',' -f4 | tr ' ' '\n' | head -n1)
+  socat - TCP:"$ip":5355 # SHOULD WORK BY DEFAULT
+  socat - TCP6:"$ip6":5355 5355 # SHOULD WORK BY DEFAULT
   incus network address-set create testAS
   incus network address-set add-addr testAS "$ip"
   incus network acl create allowtcp5355
   incus network acl rule add allowtcp5355 ingress action=allow protocol=tcp destination_port="5355" destination="\$testAS"
   incus network set "${brName}" security.acls="allowtcp5355"
-  nc -z -w 5 "$ip" 5355
+  socat - TCP:"$ip":5355
   incus network address-set add-addr testAS "$ip6"
-  nc -6 -z -w 5 "$ip6" 5355
+  socat - TCP6:"$ip6":5355 5355
   incus network address-set del-addr testAS "$ip6"
-  ! nc -6 -z -w 5 "$ip6" 5355 || false
+  ! socat - TCP6:"$ip6":5355 || false
   incus network set "${brName}" security.acls=""
   incus network acl delete allowtcp5355
   incus network address-set rm testAS
