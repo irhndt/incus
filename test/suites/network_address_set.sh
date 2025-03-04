@@ -70,55 +70,57 @@ EOF
         ipv6.address=2001:db8::1/64
 
   incus launch testimage testct
-  ip=$(incus list testct --format csv | cut -d',' -f3 | head -n1 | cut -d' ' -f1)
+  sleep 2
+  incus exec testct -- ip a add 192.0.2.2/24 dev eth0
+  incus exec testct -- ip a add 2001:db8::2/64 dev eth0
   incus network address-set create testAS
-  incus network address-set add-addr testAS "$ip"
+  incus network address-set add-addr testAS 192.0.2.2
   incus network acl create allowping
   incus network acl rule add blockping ingress action=allow protocol=icmp4 destination="\$testAS"
   incus network set "${brName}" security.acls="allowping"
   sleep 1
-  ping -c2 "$ip" > /dev/null
-  incus network address-set del-addr testAS "$ip"
+  ping -c2 192.0.2.2 > /dev/null
+  incus network address-set del-addr testAS 192.0.2.2
   incus network set "${brName}" security.acls=""
   incus network acl delete allowping
   incus network address-set delete testAS
   incus network address-set create testAS
-  incus network address-set add-addr testAS "$ip"
+  incus network address-set add-addr testAS 192.0.2.2
   incus launch testimage testct2
-  ip2=$(incus list testct2 --format csv | cut -d',' -f3 | head -n1 | cut -d' ' -f1)
+  incus exec testct -- ip a add 192.0.2.3/24 dev eth0
+  incus exec testct -- ip a add 2001:db8::3/64 dev eth0
   incus network acl create mixedACL
-  incus network acl rule add mixedACL ingress action=allow protocol=icmp4 destination="$ip2,\$testAS"
+  incus network acl rule add mixedACL ingress action=allow protocol=icmp4 destination="192.0.2.3,\$testAS"
   incus network set "${brName}" security.acls="mixedACL"
   sleep 1
-  ping -c2 "$ip" > /dev/null
-  ping -c2 "$ip2" > /dev/null
+  ping -c2 192.0.2.2 > /dev/null
+  ping -c2 192.0.2.3 > /dev/null
   incus network set "${brName}" security.acls=""
   incus network acl delete mixedACL
   incus network address-set rm testAS
   incus delete testct2 --force
-  subnet=$(echo "$ip" | awk -F. '{print $1"."$2"."$3".0/24"}')
+  subnet=$(echo 192.0.2.2 | awk -F. '{print $1"."$2"."$3".0/24"}')
   incus network address-set create testAS
   incus network address-set add-addr testAS "$subnet"
   incus network acl create cidrACL
   incus network acl rule add cidrACL ingress action=allow protocol=icmp4 destination="\$testAS"
   incus network set "${brName}" security.acls="cidrACL"
   sleep 1
-  ping -c2 "$ip" > /dev/null
+  ping -c2 192.0.2.2 > /dev/null
   incus network set "${brName}" security.acls=""
   incus network acl delete cidrACL
   incus network address-set rm testAS
-  ip6=$(incus list testct --format csv | cut -d',' -f4 | tr ' ' '\n' | head -n1)
   incus network address-set create testAS
-  incus network address-set add-addr testAS "$ip"
+  incus network address-set add-addr testAS 192.0.2.2
   incus network acl create allowtcp8080
   incus network acl rule add allowtcp8080 egress action=allow protocol=tcp destination_port="8080" destination="\$testAS"
   incus network set "${brName}" security.acls="allowtcp8080"
   nc -l -p 8080 -q0 -s 192.0.2.1 8080 </dev/null >/dev/null &
   nc -l -p 8080 -q0 -s 2001:db8::1 8080 </dev/null >/dev/null &  
-  incus exec testct --disable-stdin -- nc -w2 "$ip" 8080
-  incus network address-set add-addr testAS "$ip6"
+  incus exec testct --disable-stdin -- nc -w2 192.0.2.2 8080
+  incus network address-set add-addr testAS 2001:db8::2
   incus exec testct --disable-stdin -- nc -w2 2001:db8::1 8080
-  incus network address-set del-addr testAS "$ip6"
+  incus network address-set del-addr testAS 2001:db8::2
   ! incus exec testct --disable-stdin -- nc -w2 2001:db8::1 8080 || false
   incus network set "${brName}" security.acls=""
   incus network acl delete allowtcp8080
