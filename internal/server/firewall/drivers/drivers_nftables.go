@@ -369,7 +369,7 @@ func (d Nftables) NetworkSetup(networkName string, opts Opts) error {
 	return nil
 }
 
-// NetworkClear removes the Incus network related chains.
+// NetworkClear removes the Incus network related chains and address sets.
 // The delete and ipeVersions arguments have no effect for nftables driver.
 func (d Nftables) NetworkClear(networkName string, _ bool, _ []uint) error {
 	removeChains := []string{
@@ -384,6 +384,11 @@ func (d Nftables) NetworkClear(networkName string, _ bool, _ []uint) error {
 	err := d.removeChains([]string{"inet", "ip", "ip6", "netdev"}, networkName, removeChains...)
 	if err != nil {
 		return fmt.Errorf("Failed clearing nftables rules for network %q: %w", networkName, err)
+	}
+
+	err = d.RemoveIncusAddressSets()
+	if err != nil {
+		return fmt.Errorf("Error in deletion of address sets: %w", err)
 	}
 
 	return nil
@@ -1604,4 +1609,34 @@ func (d Nftables) NamedAddressSetExists(setName string, family string) (bool, er
 
 	// Set not found.
 	return false, nil
+}
+
+// RemoveIncusAddressSets remove every address set in incus namespace
+func (d Nftables) RemoveIncusAddressSets() error {
+	// Execute the nft command with JSON output using subprocess.
+	output, err := subprocess.RunCommand("nft", "-j", "list", "sets", "inet")
+	if err != nil {
+		return fmt.Errorf("failed to execute nft command: %w", err)
+	}
+
+	var setsOutput NftListSetsOutput
+	err = json.Unmarshal([]byte(output), &setsOutput)
+	if err != nil {
+		return fmt.Errorf("failed to parse nft command output: %w", err)
+	}
+
+	for _, setEntry := range setsOutput.Nftables {
+		if setEntry.Set == nil {
+			continue // Skip entries that do not contain a set.
+		}
+
+		if strings.EqualFold(setEntry.Set.Table, nftablesNamespace) {
+			_, err := subprocess.RunCommand("nft", "delete", "set", "inet", nftablesNamespace, setEntry.Set.Name)
+			if err != nil {
+				return fmt.Errorf("failed to delete nft named set %s: %w", setEntry.Set.Name, err)
+			}
+		}
+	}
+
+	return nil
 }
