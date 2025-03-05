@@ -118,7 +118,7 @@ EOF
   incus network acl delete cidrACL
   incus network address-set rm testAS
   incus network address-set create testAS
-  incus network address-set add-addr testAS 192.0.2.2
+  incus network address-set add-addr testAS 192.0.2.1
   incus network acl create allowtcp8080
   # shellcheck disable=2016
   incus network acl rule add allowtcp8080 egress action=allow protocol=tcp destination_port="8080" destination='\$testAS'
@@ -126,9 +126,9 @@ EOF
   nc -l -p 8080 -q0 -s 192.0.2.1 </dev/null >/dev/null &
   nc -l -p 8080 -q0 -s 2001:db8::1 </dev/null >/dev/null &
   incus exec testct --disable-stdin -- nc -w2 192.0.2.1 8080
-  incus network address-set add-addr testAS 2001:db8::2
+  incus network address-set add-addr testAS 2001:db8::1
   incus exec testct --disable-stdin -- nc -w2 2001:db8::1 8080
-  incus network address-set del-addr testAS 2001:db8::2
+  incus network address-set del-addr testAS 2001:db8::1
   ! incus exec testct --disable-stdin -- nc -w2 2001:db8::1 8080 || false
   incus network set "${brName}" security.acls=""
   incus network acl delete allowtcp8080
