@@ -123,13 +123,13 @@ EOF
   # shellcheck disable=2016
   incus network acl rule add allowtcp8080 egress action=allow protocol=tcp destination_port="8080" destination='\$testAS'
   incus network set "${brName}" security.acls="allowtcp8080"
-  nc -l -p 8080 -q0 -s 192.0.2.1 8080 </dev/null >/dev/null &
-  nc -l -p 8080 -q0 -s 2001:db8::1 8080 </dev/null >/dev/null &
-  incus exec testct --disable-stdin -- nc -4 -c2 192.0.2.1 8080
+  nc -l -p 8080 -q0 -s 192.0.2.1 </dev/null >/dev/null &
+  nc -l -p 8080 -q0 -s 2001:db8::1 </dev/null >/dev/null &
+  incus exec testct --disable-stdin -- nc -w2 192.0.2.1 8080
   incus network address-set add-addr testAS 2001:db8::2
-  incus exec testct --disable-stdin -- nc -6 -c2 2001:db8::1 8080
+  incus exec testct --disable-stdin -- nc -w2 2001:db8::1 8080
   incus network address-set del-addr testAS 2001:db8::2
-  ! incus exec testct --disable-stdin -- nc -6 -c2 2001:db8::1 8080 || false
+  ! incus exec testct --disable-stdin -- nc -w2 2001:db8::1 8080 || false
   incus network set "${brName}" security.acls=""
   incus network acl delete allowtcp8080
   incus network address-set rm testAS
