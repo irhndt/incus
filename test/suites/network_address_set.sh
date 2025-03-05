@@ -70,7 +70,7 @@ EOF
         ipv6.address=2001:db8::1/64
 
   incus init testimage testct
-  incus config device override testct eth0 network="${brName}"
+  incus profile show testct | sed  "s/nictype: p2p/network: ${brName}/" | incus profile edit testct
   incus start testct
   sleep 2
   incus exec testct -- ip a add 192.0.2.2/24 dev eth0
