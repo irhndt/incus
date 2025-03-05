@@ -69,10 +69,12 @@ EOF
         ipv4.address=192.0.2.1/24 \
         ipv6.address=2001:db8::1/64
 
-  incus init testimage testct
+  incus profile copy default "testct"
   incus profile show testct | sed  "s/nictype: p2p/network: ${brName}/" | incus profile edit testct
+  incus init testimage testct -p testct
   incus start testct
   sleep 2
+
   incus exec testct -- ip a add 192.0.2.2/24 dev eth0
   incus exec testct -- ip a add 2001:db8::2/64 dev eth0
   incus network address-set create testAS
