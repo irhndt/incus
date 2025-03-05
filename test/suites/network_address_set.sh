@@ -133,6 +133,7 @@ EOF
   incus network set "${brName}" security.acls=""
   incus network acl delete allowtcp8080
   incus network address-set rm testAS
+  incus rm --force testct
   incus profile delete testct
   incus network delete "${brName}"
 }
