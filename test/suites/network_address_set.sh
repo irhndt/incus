@@ -76,7 +76,7 @@ EOF
   incus network address-set create testAS
   incus network address-set add-addr testAS 192.0.2.2
   incus network acl create allowping
-  eval "incus network acl rule add allowping ingress action=allow protocol=icmp4 destination=\"\$testAS\"" # eval to avoid expansion
+  incus network acl rule add allowping ingress action=allow protocol=icmp4 destination='\$testAS' # single quote to avoid expansion
   incus network set "${brName}" security.acls="allowping"
   sleep 1
   ping -c2 192.0.2.2 > /dev/null
@@ -90,7 +90,7 @@ EOF
   incus exec testct -- ip a add 192.0.2.3/24 dev eth0
   incus exec testct -- ip a add 2001:db8::3/64 dev eth0
   incus network acl create mixedACL
-  incus network acl rule add mixedACL ingress action=allow protocol=icmp4 destination="192.0.2.3,\$testAS"
+  incus network acl rule add mixedACL ingress action=allow protocol=icmp4 destination='192.0.2.3,\$testAS'
   incus network set "${brName}" security.acls="mixedACL"
   sleep 1
   ping -c2 192.0.2.2 > /dev/null
@@ -103,7 +103,7 @@ EOF
   incus network address-set create testAS
   incus network address-set add-addr testAS "$subnet"
   incus network acl create cidrACL
-  incus network acl rule add cidrACL ingress action=allow protocol=icmp4 destination="\$testAS"
+  incus network acl rule add cidrACL ingress action=allow protocol=icmp4 destination='\$testAS'
   incus network set "${brName}" security.acls="cidrACL"
   sleep 1
   ping -c2 192.0.2.2 > /dev/null
@@ -113,7 +113,7 @@ EOF
   incus network address-set create testAS
   incus network address-set add-addr testAS 192.0.2.2
   incus network acl create allowtcp8080
-  incus network acl rule add allowtcp8080 egress action=allow protocol=tcp destination_port="8080" destination="\$testAS"
+  incus network acl rule add allowtcp8080 egress action=allow protocol=tcp destination_port="8080" destination='\$testAS'
   incus network set "${brName}" security.acls="allowtcp8080"
   nc -l -p 8080 -q0 -s 192.0.2.1 8080 </dev/null >/dev/null &
   nc -l -p 8080 -q0 -s 2001:db8::1 8080 </dev/null >/dev/null &
