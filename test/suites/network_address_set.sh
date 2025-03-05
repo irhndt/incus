@@ -76,7 +76,7 @@ EOF
   incus network address-set create testAS
   incus network address-set add-addr testAS 192.0.2.2
   incus network acl create allowping
-  incus network acl rule add allowping ingress action=allow protocol=icmp4 destination="\\$testAS" # double escape to avoid parameter expansion from main
+  eval "incus network acl rule add allowping ingress action=allow protocol=icmp4 destination=\"\$testAS\"" # eval to avoid expansion
   incus network set "${brName}" security.acls="allowping"
   sleep 1
   ping -c2 192.0.2.2 > /dev/null
