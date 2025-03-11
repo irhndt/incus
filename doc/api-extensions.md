@@ -2760,3 +2760,7 @@ This introduces a new `io.bus` property for compatible network devices allowing 
 ## `disk_io_bus_usb`
 
 Adds a new `usb` value for `io.bus` on `disk` devices.
+
+## `network_address_set`
+
+This adds the concept of network address sets to API under the API endpoint prefix `/1.0/network-address-sets`.
