@@ -167,7 +167,7 @@ func networkZoneRecordsGet(d *Daemon, r *http.Request) response.Response {
 	}
 
 	// Get the network zone.
-	netzone, err := zone.LoadByNameAndProject(s, projectName, zoneName)
+	netzone, err := zone.LoadByName(s, projectName, zoneName)
 	if err != nil {
 		return response.SmartError(err)
 	}
@@ -252,7 +252,7 @@ func networkZoneRecordsPost(d *Daemon, r *http.Request) response.Response {
 	}
 
 	// Get the network zone.
-	netzone, err := zone.LoadByNameAndProject(s, projectName, zoneName)
+	netzone, err := zone.LoadByName(s, projectName, zoneName)
 	if err != nil {
 		return response.SmartError(err)
 	}
@@ -319,7 +319,7 @@ func networkZoneRecordDelete(d *Daemon, r *http.Request) response.Response {
 	}
 
 	// Get the network zone.
-	netzone, err := zone.LoadByNameAndProject(s, projectName, zoneName)
+	netzone, err := zone.LoadByName(s, projectName, zoneName)
 	if err != nil {
 		return response.SmartError(err)
 	}
@@ -394,7 +394,7 @@ func networkZoneRecordGet(d *Daemon, r *http.Request) response.Response {
 	}
 
 	// Get the network zone.
-	netzone, err := zone.LoadByNameAndProject(s, projectName, zoneName)
+	netzone, err := zone.LoadByName(s, projectName, zoneName)
 	if err != nil {
 		return response.SmartError(err)
 	}
@@ -496,7 +496,7 @@ func networkZoneRecordPut(d *Daemon, r *http.Request) response.Response {
 	}
 
 	// Get the network zone.
-	netzone, err := zone.LoadByNameAndProject(s, projectName, zoneName)
+	netzone, err := zone.LoadByName(s, projectName, zoneName)
 	if err != nil {
 		return response.SmartError(err)
 	}

@@ -217,7 +217,7 @@ func networkZonesGet(d *Daemon, r *http.Request) response.Response {
 		}
 
 		if mustLoadObjects {
-			netzone, err := zone.LoadByNameAndProject(s, projectName, zoneName)
+			netzone, err := zone.LoadByName(s, projectName, zoneName)
 			if err != nil {
 				continue
 			}
@@ -309,7 +309,7 @@ func networkZonesPost(d *Daemon, r *http.Request) response.Response {
 		return response.SmartError(err)
 	}
 
-	netzone, err := zone.LoadByNameAndProject(s, projectName, req.Name)
+	netzone, err := zone.LoadByName(s, projectName, req.Name)
 	if err != nil {
 		return response.BadRequest(err)
 	}
@@ -362,7 +362,7 @@ func networkZoneDelete(d *Daemon, r *http.Request) response.Response {
 		return response.SmartError(err)
 	}
 
-	netzone, err := zone.LoadByNameAndProject(s, projectName, zoneName)
+	netzone, err := zone.LoadByName(s, projectName, zoneName)
 	if err != nil {
 		return response.SmartError(err)
 	}
@@ -435,7 +435,7 @@ func networkZoneGet(d *Daemon, r *http.Request) response.Response {
 		return response.SmartError(err)
 	}
 
-	netzone, err := zone.LoadByNameAndProject(s, projectName, zoneName)
+	netzone, err := zone.LoadByName(s, projectName, zoneName)
 	if err != nil {
 		return response.SmartError(err)
 	}
@@ -532,7 +532,7 @@ func networkZonePut(d *Daemon, r *http.Request) response.Response {
 	}
 
 	// Get the existing Network zone.
-	netzone, err := zone.LoadByNameAndProject(s, projectName, zoneName)
+	netzone, err := zone.LoadByName(s, projectName, zoneName)
 	if err != nil {
 		return response.SmartError(err)
 	}
