@@ -13,6 +13,7 @@ import (
 	"github.com/lxc/incus/v6/internal/server/auth"
 	clusterRequest "github.com/lxc/incus/v6/internal/server/cluster/request"
 	"github.com/lxc/incus/v6/internal/server/db"
+	dbCluster "github.com/lxc/incus/v6/internal/server/db"
 	"github.com/lxc/incus/v6/internal/server/lifecycle"
 	"github.com/lxc/incus/v6/internal/server/network/zone"
 	"github.com/lxc/incus/v6/internal/server/project"
@@ -182,19 +183,25 @@ func networkZonesGet(d *Daemon, r *http.Request) response.Response {
 	err = s.DB.Cluster.Transaction(r.Context(), func(ctx context.Context, tx *db.ClusterTx) error {
 		// Get list of Network zones.
 		if allProjects {
-			zoneNamesMap, err = tx.GetNetworkZones(ctx)
-			if err != nil {
-				return err
-			}
-		} else {
-			zoneNames, err := tx.GetNetworkZonesByProject(ctx, projectName)
+			zones, err := dbCluster.GetNetworkZones(ctx, tx.TX())
 			if err != nil {
 				return err
 			}
 
 			zoneNamesMap = map[string]string{}
-			for _, zone := range zoneNames {
-				zoneNamesMap[zone] = projectName
+			for _, zone := range zones {
+				zoneNamesMap[zone.Name] = projectName
+			}
+		} else {
+
+			zones, err := dbCluster.GetNetworkZones(ctx, tx.TX(), dbCluster.NetworkZoneFilter{Project: &projectName})
+			if err != nil {
+				return err
+			}
+
+			zoneNamesMap = map[string]string{}
+			for _, zone := range zones {
+				zoneNamesMap[zone.Name] = projectName
 			}
 		}
 

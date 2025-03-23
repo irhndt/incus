@@ -9,6 +9,7 @@ import (
 
 	"github.com/lxc/incus/v6/internal/server/cluster/request"
 	"github.com/lxc/incus/v6/internal/server/db"
+	dbCluster "github.com/lxc/incus/v6/internal/server/db/cluster"
 	"github.com/lxc/incus/v6/shared/api"
 )
 
@@ -27,7 +28,10 @@ func (d *zone) AddRecord(req api.NetworkZoneRecordsPost) error {
 
 	err = d.state.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
 		// Add the new record.
-		_, err = tx.CreateNetworkZoneRecord(ctx, d.id, req)
+		_, err = dbCluster.CreateNetworkZoneRecord(ctx, tx.TX(), d.id, req)
+		if err != nil {
+			return err
+		}
 
 		return err
 	})
@@ -41,22 +45,19 @@ func (d *zone) AddRecord(req api.NetworkZoneRecordsPost) error {
 func (d *zone) GetRecords() ([]api.NetworkZoneRecord, error) {
 	s := d.state
 
-	var names []string
 	records := []api.NetworkZoneRecord{}
 	var record *api.NetworkZoneRecord
 
 	err := s.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
 		var err error
 
-		// Get the record names.
-		names, err = tx.GetNetworkZoneRecordNames(ctx, d.id)
-		if err != nil {
-			return err
-		}
+		records, err := dbCluster.GetNetworkZoneRecords(ctx, tx.TX(), dbCluster.NetworkZoneRecordFilter{ZoneID: &d.id})
+			if err != nil {
+				return err
+			}
 
-		// Load all the records.
-		for _, name := range names {
-			_, record, err = tx.GetNetworkZoneRecord(ctx, d.id, name)
+		for _, rec := range records {
+			record, err = rec.ToAPI(ctx, tx.Tx())
 			if err != nil {
 				return err
 			}
@@ -74,14 +75,18 @@ func (d *zone) GetRecords() ([]api.NetworkZoneRecord, error) {
 }
 
 func (d *zone) GetRecord(name string) (*api.NetworkZoneRecord, error) {
+	var dbrecord dbCluster.NetworkZoneRecord
 	var record *api.NetworkZoneRecord
 
 	err := d.state.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
 		var err error
 
 		// Get the record.
-		_, record, err = tx.GetNetworkZoneRecord(ctx, d.id, name)
-
+		_, dbrecord, err = dbCluster.GetNetworkZoneRecord(ctx, tx.TX(), d.id, name)
+		if err != nil {	
+			return err
+		}
+		record, err = dbrecord.ToAPI(ctx, tx.TX())
 		return err
 	})
 	if err != nil {
@@ -108,13 +113,13 @@ func (d *zone) UpdateRecord(name string, req api.NetworkZoneRecordPut, clientTyp
 
 	err = s.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
 		// Get the record.
-		id, _, err := tx.GetNetworkZoneRecord(ctx, d.id, name)
-		if err != nil {
+		id, _, err := dbCluster.GetNetworkZoneRecord(ctx, tx.TX(), d.id, name)
+		if err != nil {	
 			return err
 		}
 
 		// Update the record.
-		err = tx.UpdateNetworkZoneRecord(ctx, id, req)
+		err = dbCluster.UpdateNetworkZoneRecord(ctx, tx.TX(), id, req)
 		if err != nil {
 			return err
 		}
@@ -133,13 +138,13 @@ func (d *zone) DeleteRecord(name string) error {
 
 	err := s.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
 		// Get the record.
-		id, _, err := tx.GetNetworkZoneRecord(ctx, d.id, name)
-		if err != nil {
+		id, _, err := dbCluster.GetNetworkZoneRecord(ctx, tx.TX(), d.id, name)
+		if err != nil {	
 			return err
 		}
 
 		// Delete the record.
-		err = tx.DeleteNetworkZoneRecord(ctx, id)
+		err = dbCluster.DeleteNetworkZoneRecord(ctx, tx.TX(), id)
 		if err != nil {
 			return err
 		}

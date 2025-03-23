@@ -58,7 +58,7 @@ func Create(s *state.State, projectName string, zoneInfo *api.NetworkZonesPost) 
 	// Load the project.
 	var p *api.Project
 	err = s.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
-		project, err := cluster.GetProject(ctx, tx.Tx(), projectName)
+		project, err := dbCluster.GetProject(ctx, tx.Tx(), projectName)
 		if err != nil {
 			return err
 		}
@@ -90,7 +90,7 @@ func Create(s *state.State, projectName string, zoneInfo *api.NetworkZonesPost) 
 
 	err = s.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
 		// Insert DB record.
-		_, err = tx.CreateNetworkZone(ctx, projectName, zoneInfo)
+		_, err = dbCluster.CreateNetworkZone(ctx, tx.TX(), projectName, zoneInfo)
 
 		return err
 	})

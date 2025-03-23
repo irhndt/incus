@@ -13,6 +13,7 @@ import (
 	"github.com/lxc/incus/v6/internal/server/cluster"
 	"github.com/lxc/incus/v6/internal/server/cluster/request"
 	"github.com/lxc/incus/v6/internal/server/db"
+	dbCluster "github.com/lxc/incus/v6/internal/server/db/cluster"
 	"github.com/lxc/incus/v6/internal/server/network"
 	"github.com/lxc/incus/v6/internal/server/response"
 	"github.com/lxc/incus/v6/internal/server/state"
@@ -278,17 +279,33 @@ func (d *zone) Update(config *api.NetworkZonePut, clientType request.ClientType)
 		oldConfig := d.info.NetworkZonePut
 
 		// Update database.
-		err = d.state.DB.Cluster.UpdateNetworkZone(d.id, config)
-		if err != nil {
-			return err
-		}
+		err = d.state.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
+			var err error
+
+			err = dbCluster.UpdateNetworkZone(ctx, tx.TX(), d.id, config)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
 
 		// Apply changes internally and reinitialize.
 		d.info.NetworkZonePut = *config
 		d.init(d.state, d.id, d.projectName, d.info)
 
 		revert.Add(func() {
-			_ = d.state.DB.Cluster.UpdateNetworkZone(d.id, &oldConfig)
+			_ = d.state.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
+				var err error
+	
+				err = dbCluster.UpdateNetworkZone(ctx, tx.TX(), d.id, config)
+				if err != nil {
+					return err
+				}
+	
+				return nil
+			})
+
 			d.info.NetworkZonePut = oldConfig
 			d.init(d.state, d.id, d.projectName, d.info)
 		})
@@ -329,11 +346,16 @@ func (d *zone) Delete() error {
 	}
 
 	err = d.state.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
-		// Delete the database record.
-		err = tx.DeleteNetworkZone(ctx, d.id)
+		var err error
 
-		return err
+		err = dbCluster.DeleteNetworkZone(ctx, tx.TX(), d.id)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	})
+
 	if err != nil {
 		return err
 	}

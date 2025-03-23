@@ -169,11 +169,12 @@ func (n *common) validateZoneNames(config map[string]string) error {
 
 	var err error
 	var zoneProjects map[string]string
+	var zones []dbCluster.NetworkZone
 	err = n.state.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
-		zoneProjects, err = tx.GetNetworkZones(ctx)
-		if err != nil {
-			return fmt.Errorf("Failed to load all network zones: %w", err)
-		}
+		zones, err = dbCluster.GetNetworkZones(ctx, tx.TX())
+			if err != nil {
+				return err
+			}
 
 		return nil
 	})
@@ -181,6 +182,9 @@ func (n *common) validateZoneNames(config map[string]string) error {
 		return err
 	}
 
+	for _, zone := range zones {
+		zoneProjects[zone.Name] = n.project
+	}
 	for _, keyName := range []string{"dns.zone.forward", "dns.zone.reverse.ipv4", "dns.zone.reverse.ipv6"} {
 		keyZoneNames := util.SplitNTrimSpace(config[keyName], ",", -1, true)
 		keyZoneNamesLen := len(keyZoneNames)
