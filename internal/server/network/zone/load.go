@@ -7,47 +7,29 @@ import (
 	"strings"
 
 	"github.com/lxc/incus/v6/internal/server/db"
-	"github.com/lxc/incus/v6/internal/server/db/cluster"
+	dbCluster "github.com/lxc/incus/v6/internal/server/db/cluster"
 	"github.com/lxc/incus/v6/internal/server/state"
 	"github.com/lxc/incus/v6/shared/api"
 	"github.com/lxc/incus/v6/shared/util"
 )
 
 // LoadByName loads and initializes a Network zone from the database by name.
-func LoadByName(s *state.State, name string) (NetworkZone, error) {
-	var id int64
-	var projectName string
-	var zoneInfo *api.NetworkZone
-
-	err := s.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
-		var err error
-
-		id, projectName, zoneInfo, err = tx.GetNetworkZone(ctx, name)
-
-		return err
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	var zone NetworkZone = &zone{}
-	zone.init(s, id, projectName, zoneInfo)
-
-	return zone, nil
-}
-
-// LoadByNameAndProject loads and initializes a Network zone from the database by project and name.
-func LoadByNameAndProject(s *state.State, projectName string, name string) (NetworkZone, error) {
+func LoadByName(s *state.State, projectName string, name string) (NetworkZone, error) {
 	var id int64
 	var zoneInfo *api.NetworkZone
 
 	err := s.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
-		var err error
+		dbSet, err := dbCluster.GetNetworkZone(ctx, tx.TX(), projectName, name)
+		if err != nil {
+			return err
+		}
 
-		id, zoneInfo, err = tx.GetNetworkZoneByProject(ctx, projectName, name)
+		zoneInfo, err = dbSet.ToAPI(ctx, tx.TX())
+		id = dbSet.ID
 
-		return err
+		return nil
 	})
+
 	if err != nil {
 		return nil, err
 	}
