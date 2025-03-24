@@ -1,0 +1,16 @@
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest 
+go install golang.org/x/tools/cmd/goimports@latest
+go install mvdan.cc/gofumpt@latest 
+curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin 
+
+ fga cli
+ 
+ apt install liblxc-common \
+ libuv1-dev \
+ libsqlite3-dev \
+ jq \
+ libudev-dev \
+ libcap-dev \
+ lxc-dev \
+ attr shellcheck codespell \
+ libacl1-dev gettext sqlite3 socat ceph-common incus-agent  qemu-system-x86  swtpm-tools  virtiofsd  libtool build-essential  minio-client
