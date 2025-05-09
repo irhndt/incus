@@ -253,7 +253,7 @@ func (s *Server) updateTSIG() error {
 
 	err := s.db.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
 		// Get all zones
-		zones, err := dbCluster.GetNetworkZones(ctx, tx.Tx(), dbCluster.NetworkZoneFilter{})
+		zones, err := dbCluster.GetNetworkZones(ctx, tx.Tx())
 		if err != nil {
 			return err
 		}

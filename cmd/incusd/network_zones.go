@@ -182,7 +182,7 @@ func networkZonesGet(d *Daemon, r *http.Request) response.Response {
 
 	err = s.DB.Cluster.Transaction(r.Context(), func(ctx context.Context, tx *db.ClusterTx) error {
 		if allProjects {
-			zones, err = dbCluster.GetNetworkZones(ctx, tx.Tx(), dbCluster.NetworkZoneFilter{})
+			zones, err = dbCluster.GetNetworkZones(ctx, tx.Tx())
 			if err != nil {
 				return err
 			}
