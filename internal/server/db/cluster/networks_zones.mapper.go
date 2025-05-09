@@ -15,56 +15,62 @@ import (
 )
 
 var networkZoneObjects = RegisterStmt(`
-SELECT networks_zones.id, networks_zones.project_id, networks_zones.project, networks_zones.name, networks_zones.description
+SELECT networks_zones.id, networks_zones.project_id, projects.name AS project, networks_zones.name, networks_zones.description
   FROM networks_zones
+  JOIN projects ON networks_zones.project_id = projects.id
   ORDER BY networks_zones.id
 `)
 
 var networkZoneObjectsByID = RegisterStmt(`
-SELECT networks_zones.id, networks_zones.project_id, networks_zones.project, networks_zones.name, networks_zones.description
+SELECT networks_zones.id, networks_zones.project_id, projects.name AS project, networks_zones.name, networks_zones.description
   FROM networks_zones
+  JOIN projects ON networks_zones.project_id = projects.id
   WHERE ( networks_zones.id = ? )
   ORDER BY networks_zones.id
 `)
 
 var networkZoneObjectsByName = RegisterStmt(`
-SELECT networks_zones.id, networks_zones.project_id, networks_zones.project, networks_zones.name, networks_zones.description
+SELECT networks_zones.id, networks_zones.project_id, projects.name AS project, networks_zones.name, networks_zones.description
   FROM networks_zones
+  JOIN projects ON networks_zones.project_id = projects.id
   WHERE ( networks_zones.name = ? )
   ORDER BY networks_zones.id
 `)
 
 var networkZoneObjectsByProject = RegisterStmt(`
-SELECT networks_zones.id, networks_zones.project_id, networks_zones.project, networks_zones.name, networks_zones.description
+SELECT networks_zones.id, networks_zones.project_id, projects.name AS project, networks_zones.name, networks_zones.description
   FROM networks_zones
-  WHERE ( networks_zones.project = ? )
+  JOIN projects ON networks_zones.project_id = projects.id
+  WHERE ( project = ? )
   ORDER BY networks_zones.id
 `)
 
 var networkZoneObjectsByProjectAndName = RegisterStmt(`
-SELECT networks_zones.id, networks_zones.project_id, networks_zones.project, networks_zones.name, networks_zones.description
+SELECT networks_zones.id, networks_zones.project_id, projects.name AS project, networks_zones.name, networks_zones.description
   FROM networks_zones
-  WHERE ( networks_zones.project = ? AND networks_zones.name = ? )
+  JOIN projects ON networks_zones.project_id = projects.id
+  WHERE ( project = ? AND networks_zones.name = ? )
   ORDER BY networks_zones.id
 `)
 
 var networkZoneID = RegisterStmt(`
 SELECT networks_zones.id FROM networks_zones
-  WHERE networks_zones.name = ?
+  JOIN projects ON networks_zones.project_id = projects.id
+  WHERE projects.name = ? AND networks_zones.name = ?
 `)
 
 var networkZoneCreate = RegisterStmt(`
-INSERT INTO networks_zones (project, name, description)
-  VALUES (?, ?, ?)
+INSERT INTO networks_zones (project_id, name, description)
+  VALUES ((SELECT projects.id FROM projects WHERE projects.name = ?), ?, ?)
 `)
 
 var networkZoneRename = RegisterStmt(`
-UPDATE networks_zones SET name = ? WHERE name = ?
+UPDATE networks_zones SET name = ? WHERE project_id = (SELECT projects.id FROM projects WHERE projects.name = ?) AND name = ?
 `)
 
 var networkZoneUpdate = RegisterStmt(`
 UPDATE networks_zones
-  SET project = ?, name = ?, description = ?
+  SET project_id = (SELECT projects.id FROM projects WHERE projects.name = ?), name = ?, description = ?
  WHERE id = ?
 `)
 
@@ -75,7 +81,7 @@ DELETE FROM networks_zones WHERE id = ?
 // networkZoneColumns returns a string of column names to be used with a SELECT statement for the entity.
 // Use this function when building statements to retrieve database entries matching the NetworkZone entity.
 func networkZoneColumns() string {
-	return "networks_zones.id, networks_zones.project_id, networks_zones.project, networks_zones.name, networks_zones.description"
+	return "networks_zones.id, networks_zones.project_id, projects.name AS project, networks_zones.name, networks_zones.description"
 }
 
 // getNetworkZones can be used to run handwritten sql.Stmts to return a slice of objects.
@@ -291,12 +297,13 @@ func GetNetworkZoneConfig(ctx context.Context, db tx, networkZoneID int, filters
 
 // GetNetworkZone returns the NetworkZone with the given key.
 // generator: NetworkZone GetOne
-func GetNetworkZone(ctx context.Context, db dbtx, name string) (_ *NetworkZone, _err error) {
+func GetNetworkZone(ctx context.Context, db dbtx, project string, name string) (_ *NetworkZone, _err error) {
 	defer func() {
 		_err = mapErr(_err, "NetworkZone")
 	}()
 
 	filter := NetworkZoneFilter{}
+	filter.Project = &project
 	filter.Name = &name
 
 	objects, err := GetNetworkZones(ctx, db, filter)
@@ -312,6 +319,32 @@ func GetNetworkZone(ctx context.Context, db dbtx, name string) (_ *NetworkZone, 
 	default:
 		return nil, fmt.Errorf("More than one \"networks_zones\" entry matches")
 	}
+}
+
+// NetworkZoneExists checks if a NetworkZone with the given key exists.
+// generator: NetworkZone Exists
+func NetworkZoneExists(ctx context.Context, db dbtx, project string, name string) (_ bool, _err error) {
+	defer func() {
+		_err = mapErr(_err, "NetworkZone")
+	}()
+
+	stmt, err := Stmt(db, networkZoneID)
+	if err != nil {
+		return false, fmt.Errorf("Failed to get \"networkZoneID\" prepared statement: %w", err)
+	}
+
+	row := stmt.QueryRowContext(ctx, project, name)
+	var id int64
+	err = row.Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, fmt.Errorf("Failed to get \"networks_zones\" ID: %w", err)
+	}
+
+	return true, nil
 }
 
 // CreateNetworkZone adds a new NetworkZone to the database.
@@ -382,7 +415,7 @@ func CreateNetworkZoneConfig(ctx context.Context, db dbtx, networkZoneID int64, 
 
 // GetNetworkZoneID return the ID of the NetworkZone with the given key.
 // generator: NetworkZone ID
-func GetNetworkZoneID(ctx context.Context, db tx, name string) (_ int64, _err error) {
+func GetNetworkZoneID(ctx context.Context, db tx, project string, name string) (_ int64, _err error) {
 	defer func() {
 		_err = mapErr(_err, "NetworkZone")
 	}()
@@ -392,7 +425,7 @@ func GetNetworkZoneID(ctx context.Context, db tx, name string) (_ int64, _err er
 		return -1, fmt.Errorf("Failed to get \"networkZoneID\" prepared statement: %w", err)
 	}
 
-	row := stmt.QueryRowContext(ctx, name)
+	row := stmt.QueryRowContext(ctx, project, name)
 	var id int64
 	err = row.Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -408,7 +441,7 @@ func GetNetworkZoneID(ctx context.Context, db tx, name string) (_ int64, _err er
 
 // RenameNetworkZone renames the NetworkZone matching the given key parameters.
 // generator: NetworkZone Rename
-func RenameNetworkZone(ctx context.Context, db dbtx, name string, to string) (_err error) {
+func RenameNetworkZone(ctx context.Context, db dbtx, project string, name string, to string) (_err error) {
 	defer func() {
 		_err = mapErr(_err, "NetworkZone")
 	}()
@@ -418,7 +451,7 @@ func RenameNetworkZone(ctx context.Context, db dbtx, name string, to string) (_e
 		return fmt.Errorf("Failed to get \"networkZoneRename\" prepared statement: %w", err)
 	}
 
-	result, err := stmt.Exec(to, name)
+	result, err := stmt.Exec(to, project, name)
 	if err != nil {
 		return fmt.Errorf("Rename NetworkZone failed: %w", err)
 	}
@@ -437,12 +470,12 @@ func RenameNetworkZone(ctx context.Context, db dbtx, name string, to string) (_e
 
 // UpdateNetworkZone updates the NetworkZone matching the given key parameters.
 // generator: NetworkZone Update
-func UpdateNetworkZone(ctx context.Context, db tx, name string, object NetworkZone) (_err error) {
+func UpdateNetworkZone(ctx context.Context, db tx, project string, name string, object NetworkZone) (_err error) {
 	defer func() {
 		_err = mapErr(_err, "NetworkZone")
 	}()
 
-	id, err := GetNetworkZoneID(ctx, db, name)
+	id, err := GetNetworkZoneID(ctx, db, project, name)
 	if err != nil {
 		return err
 	}

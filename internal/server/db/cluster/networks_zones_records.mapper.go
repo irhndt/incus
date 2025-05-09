@@ -17,7 +17,7 @@ import (
 var networkZoneRecordObjects = RegisterStmt(`
 SELECT networks_zones_records.id, networks_zones_records.network_zone_id, networks_zones_records.name, networks_zones_records.description, networks_zones_records.entries
   FROM networks_zones_records
-  ORDER BY networks_zones_records.id
+  ORDER BY networks_zones_records.id, networks_zones_records.network_zone_id
 `)
 
 var networkZoneRecordNames = RegisterStmt(`
@@ -30,35 +30,35 @@ var networkZoneRecordObjectsByID = RegisterStmt(`
 SELECT networks_zones_records.id, networks_zones_records.network_zone_id, networks_zones_records.name, networks_zones_records.description, networks_zones_records.entries
   FROM networks_zones_records
   WHERE ( networks_zones_records.id = ? )
-  ORDER BY networks_zones_records.id
+  ORDER BY networks_zones_records.id, networks_zones_records.network_zone_id
 `)
 
 var networkZoneRecordObjectsByName = RegisterStmt(`
 SELECT networks_zones_records.id, networks_zones_records.network_zone_id, networks_zones_records.name, networks_zones_records.description, networks_zones_records.entries
   FROM networks_zones_records
   WHERE ( networks_zones_records.name = ? )
-  ORDER BY networks_zones_records.id
+  ORDER BY networks_zones_records.id, networks_zones_records.network_zone_id
 `)
 
 var networkZoneRecordObjectsByNetworkZoneID = RegisterStmt(`
 SELECT networks_zones_records.id, networks_zones_records.network_zone_id, networks_zones_records.name, networks_zones_records.description, networks_zones_records.entries
   FROM networks_zones_records
   WHERE ( networks_zones_records.network_zone_id = ? )
-  ORDER BY networks_zones_records.id
+  ORDER BY networks_zones_records.id, networks_zones_records.network_zone_id
 `)
 
 var networkZoneRecordObjectsByNetworkZoneIDAndName = RegisterStmt(`
 SELECT networks_zones_records.id, networks_zones_records.network_zone_id, networks_zones_records.name, networks_zones_records.description, networks_zones_records.entries
   FROM networks_zones_records
   WHERE ( networks_zones_records.network_zone_id = ? AND networks_zones_records.name = ? )
-  ORDER BY networks_zones_records.id
+  ORDER BY networks_zones_records.id, networks_zones_records.network_zone_id
 `)
 
 var networkZoneRecordObjectsByNetworkZoneIDAndID = RegisterStmt(`
 SELECT networks_zones_records.id, networks_zones_records.network_zone_id, networks_zones_records.name, networks_zones_records.description, networks_zones_records.entries
   FROM networks_zones_records
   WHERE ( networks_zones_records.network_zone_id = ? AND networks_zones_records.id = ? )
-  ORDER BY networks_zones_records.id
+  ORDER BY networks_zones_records.id, networks_zones_records.network_zone_id
 `)
 
 var networkZoneRecordNamesByNetworkZoneID = RegisterStmt(`

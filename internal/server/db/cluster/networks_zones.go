@@ -28,6 +28,7 @@ import (
 // Methods:
 //generate-database:mapper method -i -e NetworkZone GetMany references=Config table=networks_zones
 //generate-database:mapper method -i -e NetworkZone GetOne table=networks_zones
+//generate-database:mapper method -i -e NetworkZone Exists table=networks_zones
 //generate-database:mapper method -i -e NetworkZone Create references=Config table=networks_zones
 //generate-database:mapper method -i -e NetworkZone ID table=networks_zones
 //generate-database:mapper method -i -e NetworkZone Rename table=networks_zones

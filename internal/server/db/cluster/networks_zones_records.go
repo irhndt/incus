@@ -47,6 +47,7 @@ type NetworkZoneRecord struct {
 	Description   string
 	Entries       []api.NetworkZoneRecordEntry `db:"marshal=json"`
 }
+
 // NetworkZoneRecordFilter defines the optional WHERE-clause fields.
 type NetworkZoneRecordFilter struct {
 	ID            *int

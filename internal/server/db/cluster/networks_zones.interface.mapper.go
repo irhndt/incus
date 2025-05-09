@@ -16,7 +16,11 @@ type NetworkZoneGenerated interface {
 
 	// GetNetworkZone returns the NetworkZone with the given key.
 	// generator: NetworkZone GetOne
-	GetNetworkZone(ctx context.Context, db dbtx, name string) (*NetworkZone, error)
+	GetNetworkZone(ctx context.Context, db dbtx, project string, name string) (*NetworkZone, error)
+
+	// NetworkZoneExists checks if a NetworkZone with the given key exists.
+	// generator: NetworkZone Exists
+	NetworkZoneExists(ctx context.Context, db dbtx, project string, name string) (bool, error)
 
 	// CreateNetworkZoneConfig adds new NetworkZone Config to the database.
 	// generator: NetworkZone Create
@@ -28,11 +32,11 @@ type NetworkZoneGenerated interface {
 
 	// GetNetworkZoneID return the ID of the NetworkZone with the given key.
 	// generator: NetworkZone ID
-	GetNetworkZoneID(ctx context.Context, db tx, name string) (int64, error)
+	GetNetworkZoneID(ctx context.Context, db tx, project string, name string) (int64, error)
 
 	// RenameNetworkZone renames the NetworkZone matching the given key parameters.
 	// generator: NetworkZone Rename
-	RenameNetworkZone(ctx context.Context, db dbtx, name string, to string) error
+	RenameNetworkZone(ctx context.Context, db dbtx, project string, name string, to string) error
 
 	// UpdateNetworkZoneConfig updates the NetworkZone Config matching the given key parameters.
 	// generator: NetworkZone Update
@@ -40,7 +44,7 @@ type NetworkZoneGenerated interface {
 
 	// UpdateNetworkZone updates the NetworkZone matching the given key parameters.
 	// generator: NetworkZone Update
-	UpdateNetworkZone(ctx context.Context, db tx, name string, object NetworkZone) error
+	UpdateNetworkZone(ctx context.Context, db tx, project string, name string, object NetworkZone) error
 
 	// DeleteNetworkZone deletes the NetworkZone matching the given key parameters.
 	// generator: NetworkZone DeleteOne-by-ID
