@@ -287,7 +287,7 @@ func (d *zone) Update(config *api.NetworkZonePut, clientType request.ClientType)
 				Description: config.Description,
 			}
 
-			err := dbCluster.UpdateNetworkZone(ctx, tx.Tx(), d.info.Name, dbZone)
+			err := dbCluster.UpdateNetworkZone(ctx, tx.Tx(), dbZone.Project, dbZone.Name, dbZone)
 			if err != nil {
 				return err
 			}
@@ -316,7 +316,7 @@ func (d *zone) Update(config *api.NetworkZonePut, clientType request.ClientType)
 					Description: oldConfig.Description,
 				}
 
-				err := dbCluster.UpdateNetworkZone(ctx, tx.Tx(), d.info.Name, dbZone)
+				err := dbCluster.UpdateNetworkZone(ctx, tx.Tx(), dbZone.Project, dbZone.Name, dbZone)
 				if err != nil {
 					return err
 				}

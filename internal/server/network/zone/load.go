@@ -15,18 +15,22 @@ import (
 
 // LoadByName loads and initializes a Network zone from the database by name.
 func LoadByName(s *state.State, name string) (NetworkZone, error) {
-	var dbZone *cluster.NetworkZone
+	var dbZone []cluster.NetworkZone
 	var zoneInfo *api.NetworkZone
 
 	err := s.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
 		var err error
-
-		dbZone, err = cluster.GetNetworkZone(ctx, tx.Tx(), name)
+		filter := cluster.NetworkZoneFilter{Name: &name}
+		dbZone, err = cluster.GetNetworkZones(ctx, tx.Tx(), filter)
 		if err != nil {
 			return err
 		}
 
-		zoneInfo, err = dbZone.ToAPI(ctx, tx.Tx())
+		if len(dbZone) != 1 {
+			return fmt.Errorf("Loading for network zone for name %s returned an unexpected amount of results: %d", len(dbZone))
+		}
+
+		zoneInfo, err = dbZone[0].ToAPI(ctx, tx.Tx())
 		if err != nil {
 			return err
 		}
@@ -38,7 +42,7 @@ func LoadByName(s *state.State, name string) (NetworkZone, error) {
 	}
 
 	var zone NetworkZone = &zone{}
-	zone.init(s, int64(dbZone.ID), dbZone.Project, zoneInfo)
+	zone.init(s, int64(dbZone[0].ID), dbZone[0].Project, zoneInfo)
 
 	return zone, nil
 }
@@ -170,9 +174,23 @@ func Exists(s *state.State, name ...string) error {
 
 	err := s.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
 		for _, zoneName := range name {
-			_, err := cluster.GetNetworkZone(ctx, tx.Tx(), zoneName)
+			filter := cluster.NetworkZoneFilter{Name: &zoneName}
+			dbZone, err := cluster.GetNetworkZones(ctx, tx.Tx(), filter)
 			if err != nil {
+				return err
+			}
+
+			if len(dbZone) != 1 {
+				return fmt.Errorf("Loading for network zone for name %s returned an unexpected amount of results: %d", len(dbZone))
+			}
+
+			status, err := cluster.NetworkZoneExists(ctx, tx.Tx(), dbZone[0].Project, zoneName)
+			if !status {
 				return fmt.Errorf("Network zone %q does not exist", zoneName)
+			}
+
+			if err != nil {
+				return fmt.Errorf("Error when checking existence of %q network zone in project %q", zoneName, dbZone[0].Project)
 			}
 
 			_, found := checkedzoneNames[zoneName]
