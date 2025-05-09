@@ -1,6 +1,9 @@
 //go:build linux && cgo && !agent
 
 package cluster
+
+import "context"
+
 // NetworkZoneRecordGenerated is an interface of generated methods for NetworkZoneRecord.
 type NetworkZoneRecordGenerated interface {
 	// GetNetworkZoneRecordConfig returns all available NetworkZoneRecord Config

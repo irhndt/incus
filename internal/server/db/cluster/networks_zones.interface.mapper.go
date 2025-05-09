@@ -1,6 +1,9 @@
 //go:build linux && cgo && !agent
 
 package cluster
+
+import "context"
+
 // NetworkZoneGenerated is an interface of generated methods for NetworkZone.
 type NetworkZoneGenerated interface {
 	// GetNetworkZoneConfig returns all available NetworkZone Config

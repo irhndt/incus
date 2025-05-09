@@ -34,20 +34,19 @@ import (
 //generate-database:mapper method -i -e NetworkZone Update references=Config table=networks_zones
 //generate-database:mapper method -i -e NetworkZone DeleteOne-by-ID table=networks_zones
 
-
 // NetworkZone is a value object holding db-related details about a network zone (DNS).
 type NetworkZone struct {
-	ID            int      `db:"order=yes"`
-	ProjectID     int      `db:"omit=create,update"`
-	Project       string   `db:"primary=yes&join=projects.name`
-	Name          string   `db:"primary=yes"`
-	Description   string
+	ID          int    `db:"order=yes"`
+	ProjectID   int    `db:"omit=create,update"`
+	Project     string `db:"primary=yes&join=projects.name"`
+	Name        string `db:"primary=yes"`
+	Description string
 }
 
 // NetworkZoneFilter specifies potential query parameter fields.
 type NetworkZoneFilter struct {
-	ID   *int
-	Name *string
+	ID      *int
+	Name    *string
 	Project *string
 }
 
@@ -61,7 +60,7 @@ func (n *NetworkZone) ToAPI(ctx context.Context, db tx) (*api.NetworkZone, error
 
 	// Fill in the struct.
 	out := api.NetworkZone{
-		Name: n.Name,
+		Name:    n.Name,
 		Project: n.Project,
 		NetworkZonePut: api.NetworkZonePut{
 			Description: n.Description,

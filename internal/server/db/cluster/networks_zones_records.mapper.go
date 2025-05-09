@@ -7,11 +7,12 @@ package cluster
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
+
 	"github.com/mattn/go-sqlite3"
 )
-
 
 var networkZoneRecordObjects = RegisterStmt(`
 SELECT networks_zones_records.id, networks_zones_records.network_zone_id, networks_zones_records.name, networks_zones_records.description, networks_zones_records.entries

@@ -39,22 +39,22 @@ import (
 //generate-database:mapper method -i -e NetworkZoneRecord Update references=Config table=networks_zones_records
 //generate-database:mapper method -i -e NetworkZoneRecord DeleteOne-by-NetworkZoneID-and-ID table=networks_zones_records
 
-
 // NetworkZoneRecord is a value object holding db-related details about a DNS record in a network zone.
 type NetworkZoneRecord struct {
-	ID            int      `db:"order=yes"`
-	NetworkZoneID int      `db:order=yes`
-	Name          string   `db:"primary=yes"`
+	ID            int    `db:"order=yes"`
+	NetworkZoneID int    `db:"order=yes"`
+	Name          string `db:"primary=yes"`
 	Description   string
 	Entries       []api.NetworkZoneRecordEntry `db:"marshal=json"`
 }
-
+// NetworkZoneRecordFilter defines the optional WHERE-clause fields.
 type NetworkZoneRecordFilter struct {
-	ID   	*int
-	Name 	*string
-	NetworkZoneID	*int
+	ID            *int
+	Name          *string
+	NetworkZoneID *int
 }
 
+// ToAPI converts the DB record into external API type.
 func (r *NetworkZoneRecord) ToAPI(ctx context.Context, db tx) (*api.NetworkZoneRecord, error) {
 	config, err := GetNetworkZoneRecordConfig(ctx, db, r.ID)
 	if err != nil {
@@ -64,9 +64,9 @@ func (r *NetworkZoneRecord) ToAPI(ctx context.Context, db tx) (*api.NetworkZoneR
 	out := api.NetworkZoneRecord{
 		Name: r.Name,
 		NetworkZoneRecordPut: api.NetworkZoneRecordPut{
-			Description: 	r.Description,
-			Entries: 		r.Entries,
-			Config:     	config,
+			Description: r.Description,
+			Entries:     r.Entries,
+			Config:      config,
 		},
 	}
 	return &out, nil
