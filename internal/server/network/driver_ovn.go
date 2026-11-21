@@ -4386,7 +4386,7 @@ func (n *ovn) ensureNetworkPortGroup(projectID int64) error {
 	if intPortGroupUUID == "" {
 		// Create internal port group and associate it with the logical switch, so that it will be
 		// removed when the logical switch is removed.
-		err = n.ovnnb.CreatePortGroup(context.TODO(), projectID, intPortGroupName, []networkOVN.OVNPortGroup{}, n.getIntSwitchName())
+		err = n.ovnnb.CreatePortGroup(context.TODO(), projectID, intPortGroupName, []networkOVN.OVNPortGroup{}, n.getIntSwitchName(), nil)
 		if err != nil {
 			return fmt.Errorf("Failed creating port group %q for network %q setup: %w", intPortGroupName, n.Name(), err)
 		}

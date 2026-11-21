@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cenkalti/backoff/v7"
@@ -20,8 +21,11 @@ import (
 
 // NB client.
 type NB struct {
-	client ovsdbClient.Client
+	client *timeoutClient
 	cookie ovsdbClient.MonitorCookie
+
+	// portGroupMu needed to serialize ACL setup for port_group.
+	portGroupMu sync.Mutex
 }
 
 // NewNB initializes new OVN client for Northbound operations.
@@ -155,6 +159,13 @@ func NewNB(dbAddr string, sslCACert string, sslClientCert string, sslClientKey s
 	return client, nil
 }
 
+// LockPortGroups is used to avoid concurrent OVNEnsureACLs calls racing each other.
+func (o *NB) LockPortGroups() func() {
+	o.portGroupMu.Lock()
+
+	return o.portGroupMu.Unlock
+}
+
 // get is used to perform a libovsdb Get call while also makes use of the custom defined index.
 // For some reason the main Get() function only uses the built-in indices rather than considering the user provided ones.
 // This is apparently by design but makes it much more annoying to fetch records from some tables.
@@ -180,8 +191,11 @@ func (o *NB) get(ctx context.Context, m ovsdbModel.Model) error {
 		return o.client.Get(ctx, m)
 	}
 
-	// Check and assign the resulting value.
-	err := o.client.Where(m).List(ctx, collection)
+	// Check and assign the resulting value with timeout for consistent cache.
+	ctx, cancel := o.client.timeoutContext(ctx)
+	defer cancel()
+
+	err := o.client.checkErr(ctx, o.client.Where(m).List(ctx, collection))
 	if err != nil {
 		return err
 	}
