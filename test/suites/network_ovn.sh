@@ -2225,6 +2225,38 @@ test_network_ovn_acl() {
     # Check c1 can ping c2 even though its not part of the ACL (should be classified as internal anyway).
     incus exec c1 -- ping -w5 -c1 -4 c2.incus
 
+    # Check that starting concurrently instances on a fresh ACL do not trigger a race.
+    for i in 1 2 3 4 5 6; do
+        incus init "${instanceImage}" "race${i}" -n ovn0 -s "${poolName}"
+    done
+
+    for round in 1 2 3 4 5; do
+        pids=""
+        incus network acl create "race${round}"
+        incus network acl rule add "race${round}" egress action=allow protocol=tcp destination_port="100${round}"
+
+        for i in 1 2 3 4 5 6; do
+            incus config device set "race${i}" eth0 security.acls="race${round}"
+        done
+
+        for i in 1 2 3 4 5 6; do
+            incus start "race${i}" &
+            pids="$! ${pids}"
+        done
+
+        for pid in ${pids}; do
+            wait "${pid}"
+        done
+
+        ovn-nbctl list acl | grep -F "tcp.dst == 100${round}"
+        incus stop -f race1 race2 race3 race4 race5 race6
+    done
+
+    incus delete -f race1 race2 race3 race4 race5 race6
+    for round in 1 2 3 4 5; do
+        incus network acl delete "race${round}"
+    done
+
     # Cleanup.
     incus delete -f c1
     incus delete -f c2
