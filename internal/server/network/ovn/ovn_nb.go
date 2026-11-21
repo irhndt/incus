@@ -21,7 +21,7 @@ import (
 
 // NB client.
 type NB struct {
-	client ovsdbClient.Client
+	client *timeoutClient
 	cookie ovsdbClient.MonitorCookie
 
 	// portGroupMu needed to serialize ACL setup for port_group.
@@ -191,8 +191,11 @@ func (o *NB) get(ctx context.Context, m ovsdbModel.Model) error {
 		return o.client.Get(ctx, m)
 	}
 
-	// Check and assign the resulting value.
-	err := o.client.Where(m).List(ctx, collection)
+	// Check and assign the resulting value with timeout for consistent cache.
+	ctx, cancel := o.client.timeoutContext(ctx)
+	defer cancel()
+
+	err := o.client.checkErr(ctx, o.client.Where(m).List(ctx, collection))
 	if err != nil {
 		return err
 	}
