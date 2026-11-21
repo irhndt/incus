@@ -218,9 +218,6 @@ func PortGroupActionPriority(action string, reversed bool) int {
 // is checked for existence (it is created & applies network specific ACL rules if not).
 // Returns a revert fail function that can be used to undo this function if a subsequent step fails.
 func OVNEnsureACLs(s *state.State, l logger.Logger, client *ovn.NB, aclProjectName string, aclNameIDs map[string]int64, aclNets map[string]NetworkACLUsage, aclNames []string, reapplyRules bool) (revert.Hook, error) {
-	reverter := revert.New()
-	defer reverter.Fail()
-
 	var err error
 	var projectID int64
 	err = s.DB.Cluster.Transaction(context.TODO(), func(ctx context.Context, tx *db.ClusterTx) error {
@@ -310,6 +307,14 @@ func OVNEnsureACLs(s *state.State, l logger.Logger, client *ovn.NB, aclProjectNa
 			return nil, fmt.Errorf("Cannot find security ACL ID for %q", aclName)
 		}
 	}
+
+	// This lock is used to avoid that port group operations races each other.
+	unlock := client.LockPortGroups()
+	defer unlock()
+
+	// The main reverter is then called after to ensure it runs before unlock.
+	reverter := revert.New()
+	defer reverter.Fail()
 
 	// Next check which OVN port groups need creating and which exist already.
 	type aclStatus struct {

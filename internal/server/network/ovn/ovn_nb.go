@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cenkalti/backoff/v7"
@@ -22,6 +23,9 @@ import (
 type NB struct {
 	client ovsdbClient.Client
 	cookie ovsdbClient.MonitorCookie
+
+	// portGroupMu needed to serialize ACL setup for port_group.
+	portGroupMu sync.Mutex
 }
 
 // NewNB initializes new OVN client for Northbound operations.
@@ -153,6 +157,13 @@ func NewNB(dbAddr string, sslCACert string, sslClientCert string, sslClientKey s
 	})
 
 	return client, nil
+}
+
+// LockPortGroups is used to avoid concurrent OVNEnsureACLs calls racing each other.
+func (o *NB) LockPortGroups() func() {
+	o.portGroupMu.Lock()
+
+	return o.portGroupMu.Unlock
 }
 
 // get is used to perform a libovsdb Get call while also makes use of the custom defined index.
